@@ -1,0 +1,53 @@
+{
+  "name": "react-template-components",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "React components library for cdn.jsdelivr.net distribution",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "unpkg": "dist/index.umd.js",
+  "jsdelivr": "dist/index.umd.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "react",
+    "components",
+    "library",
+    "cdn",
+    "jsdelivr",
+    "ui"
+  ],
+  "author": "ilyestearti5",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ilyestearti5/Template-1.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ilyestearti5/Template-1/issues"
+  },
+  "homepage": "https://github.com/ilyestearti5/Template-1#readme",
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-replace": "^5.0.5",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "rollup": "^4.9.6",
+    "typescript": "^5.3.3",
+    "tslib": "^2.6.2"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}

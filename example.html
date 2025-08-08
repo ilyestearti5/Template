@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>React Components CDN Example</title>
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- Load your React components library from CDN (includes React) -->
+    <script src="https://cdn.jsdelivr.net/gh/ilyestearti5/Template-1@latest/dist/index.umd.js"></script>
+
+    <script>
+        const { Button, Card, Input } = ReactTemplateComponents;
+        
+        // Create a simple app using your components
+        const app = ReactTemplateComponents.React.createElement('div', 
+            { style: { padding: '20px', fontFamily: 'Arial, sans-serif' } },
+            
+            ReactTemplateComponents.React.createElement('h1', null, 'React Components CDN Demo'),
+            
+            ReactTemplateComponents.React.createElement(Card, 
+                { title: 'Button Examples', style: { marginBottom: '20px' } },
+                ReactTemplateComponents.React.createElement('div', 
+                    { style: { display: 'flex', gap: '10px', marginBottom: '10px' } },
+                    ReactTemplateComponents.React.createElement(Button, 
+                        { 
+                            variant: 'primary', 
+                            onClick: () => alert('Primary clicked!') 
+                        }, 
+                        'Primary Button'
+                    ),
+                    ReactTemplateComponents.React.createElement(Button, 
+                        { 
+                            variant: 'secondary', 
+                            onClick: () => alert('Secondary clicked!') 
+                        }, 
+                        'Secondary Button'
+                    ),
+                    ReactTemplateComponents.React.createElement(Button, 
+                        { 
+                            variant: 'danger', 
+                            onClick: () => alert('Danger clicked!') 
+                        }, 
+                        'Danger Button'
+                    )
+                )
+            ),
+            
+            ReactTemplateComponents.React.createElement(Card, 
+                { title: 'Input Example' },
+                ReactTemplateComponents.React.createElement(Input, 
+                    { 
+                        placeholder: 'Type something...',
+                        onChange: (value) => console.log('Input value:', value)
+                    }
+                ),
+                ReactTemplateComponents.React.createElement('p', null, 'Check console for input changes')
+            )
+        );
+
+        ReactTemplateComponents.ReactDOM.render(app, document.getElementById('root'));
+    </script>
+</body>
+</html>
