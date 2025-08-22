@@ -3,8 +3,29 @@ import {
   getTempFromStore,
   getTemp,
   useCopyState,
+  useTemp,
 } from "@biqpod/app/ui/hooks";
 import { useMemo, useEffect } from "react";
+import { Customer, api } from "./api";
+
+export function initCustomer() {
+  useEffect(() => {
+    return api.account.onUserDetect((_, info) => {
+      setTemp("customer", info || null);
+    });
+  }, []);
+}
+
+// Authentication functionality
+export const useCustomer = () => {
+  const customer = useTemp<Customer | null>("customer");
+  return customer.get;
+};
+
+export const useIsSignedIn = () => {
+  const customer = useCustomer();
+  return customer !== null;
+};
 
 // Cart functionality
 export const addToCart = (prodId: string, count: number) => {
@@ -128,7 +149,6 @@ export function initCart() {
   }, []);
   useEffect(() => {
     if (cartsLoaded.get) {
-      console.log("Carts Loaded:", fullCarts);
       localStorage.setItem("cart", JSON.stringify(fullCarts));
     }
   }, [fullCarts, cartsLoaded.get]);

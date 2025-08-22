@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useHistory } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Icon, Translate } from "@biqpod/app/ui/components";
@@ -6,13 +6,15 @@ import { useAsyncMemo } from "@biqpod/app/ui/hooks";
 import { allIcons } from "@biqpod/app/ui/apis";
 import { api } from "../api";
 import { useFavoriteProducts, clearAllFavorites } from "../hooks";
-import { SearchProductCard } from "./SearchProductCard";
+import { ProductCard } from "./ProductCard";
 import { Button } from "./Custom";
-import { icons } from "./utils";
+import { icons, BRAND_COLOR_PRIMARY } from "./utils";
+import { Breadcrumb } from "./Breadcrumb";
 
 export const FavoritesPage = () => {
   const history = useHistory();
   const favoriteProductIds = useFavoriteProducts();
+  const [showClearConfirmation, setShowClearConfirmation] = useState(false);
 
   // Fetch all products to get favorite product details
   const products = useAsyncMemo(async () => {
@@ -27,32 +29,32 @@ export const FavoritesPage = () => {
     );
   }, [products, favoriteProductIds]);
 
+  // Confirmation dialog handlers
+  const handleClearAllClick = () => {
+    setShowClearConfirmation(true);
+  };
+
+  const confirmClearAll = () => {
+    clearAllFavorites();
+    setShowClearConfirmation(false);
+  };
+
+  const cancelClearAll = () => {
+    setShowClearConfirmation(false);
+  };
+
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Breadcrumb Navigation */}
-      <div className="bg-white py-3 border-gray-200 border-b">
-        <div className="mx-auto px-4 max-w-7xl">
-          <div className="flex items-center gap-2 text-gray-600 text-sm">
-            <button
-              onClick={() => history.push("/")}
-              className="hover:text-blue-600 transition-colors"
-              style={{ fontFamily: "Inter, sans-serif" }}
-            >
-              <Translate content="Home" />
-            </button>
-            <Icon
-              icon={allIcons.solid.faChevronRight}
-              iconClassName="text-xs"
-            />
-            <span
-              className="font-medium text-gray-900"
-              style={{ fontFamily: "Inter, sans-serif" }}
-            >
-              <Translate content="My Favorites" />
-            </span>
-          </div>
-        </div>
-      </div>
+      <Breadcrumb
+        items={[
+          {
+            label: "My Favorites",
+            isTranslatable: true,
+          },
+        ]}
+        className="bg-white"
+      />
 
       {/* Header */}
       <div className="mx-auto px-4 py-8 max-w-7xl">
@@ -99,7 +101,7 @@ export const FavoritesPage = () => {
               </Button>
 
               <Button
-                onClick={clearAllFavorites}
+                onClick={handleClearAllClick}
                 className="hover:bg-red-50 px-6 py-2 border-2 rounded-lg font-medium text-red-600 hover:text-red-700 transition-all duration-200"
                 style={{
                   fontFamily: "Inter, sans-serif",
@@ -158,7 +160,7 @@ export const FavoritesPage = () => {
                 onClick={() => history.push("/")}
                 className="shadow-lg hover:shadow-xl px-8 py-3 rounded-lg font-semibold text-white text-lg transition-all duration-200"
                 style={{
-                  backgroundColor: "#89CFF0",
+                  backgroundColor: BRAND_COLOR_PRIMARY,
                   fontFamily: "Inter, sans-serif",
                 }}
               >
@@ -186,7 +188,7 @@ export const FavoritesPage = () => {
                   whileHover={{ scale: 1.02 }}
                   className="transition-transform transform"
                 >
-                  <SearchProductCard product={product} />
+                  <ProductCard product={product} />
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -211,14 +213,10 @@ export const FavoritesPage = () => {
               <Button
                 onClick={() => {
                   // Add all favorites to cart logic
-                  favoriteProducts.forEach((product) => {
-                    // This would need to be implemented with proper cart logic
-                    console.log("Add to cart:", product.id);
-                  });
                 }}
                 className="shadow-md hover:shadow-lg px-6 py-3 rounded-lg font-medium text-white transition-all duration-200"
                 style={{
-                  backgroundColor: "#89CFF0",
+                  backgroundColor: BRAND_COLOR_PRIMARY,
                   fontFamily: "Inter, sans-serif",
                 }}
               >
@@ -251,6 +249,96 @@ export const FavoritesPage = () => {
           </motion.div>
         )}
       </div>
+
+      {/* Clear All Confirmation Dialog */}
+      <AnimatePresence>
+        {showClearConfirmation && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 20 }}
+              transition={{
+                duration: 0.4,
+                type: "spring",
+                stiffness: 260,
+                damping: 20,
+              }}
+              className="bg-white shadow-xl mx-4 p-6 rounded-xl w-full max-w-md"
+            >
+              <div className="text-center">
+                <motion.div
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ delay: 0.2, duration: 0.5, type: "spring" }}
+                  className="flex justify-center items-center bg-red-100 mx-auto mb-4 rounded-full w-12 h-12"
+                >
+                  <Icon
+                    icon={allIcons.solid.faHeart}
+                    iconClassName="text-red-600 text-xl"
+                  />
+                </motion.div>
+
+                <motion.h3
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3, duration: 0.4 }}
+                  className="mb-2 font-semibold text-gray-900 text-lg"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
+                  <Translate content="Clear All Favorites?" />
+                </motion.h3>
+
+                <motion.p
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4, duration: 0.4 }}
+                  className="mb-6 text-gray-600"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
+                  <Translate content="Are you sure you want to remove all" />{" "}
+                  {favoriteProducts.length}{" "}
+                  <Translate content="products from your favorites? This action cannot be undone." />
+                </motion.p>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5, duration: 0.4 }}
+                  className="flex space-x-3"
+                >
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={cancelClearAll}
+                    className="flex-1 hover:bg-gray-50 px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:text-gray-900 transition-all duration-200"
+                    style={{ fontFamily: "Inter, sans-serif" }}
+                  >
+                    <Translate content="Cancel" />
+                  </motion.button>
+
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={confirmClearAll}
+                    className="flex-1 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-medium text-white transition-all duration-200"
+                    style={{ fontFamily: "Inter, sans-serif" }}
+                  >
+                    <Icon icon={allIcons.solid.faTrash} iconClassName="mr-2" />
+                    <Translate content="Clear All" />
+                  </motion.button>
+                </motion.div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

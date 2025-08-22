@@ -7,15 +7,21 @@ import {
 } from "@biqpod/app/ui/components";
 import { useAsyncMemo } from "@biqpod/app/ui/hooks";
 import { useRef, useState, useCallback, useMemo, useEffect } from "react";
+import { useHistory } from "react-router";
 import { api } from "../api";
 import { Button } from "./Custom";
 import { ProductCard } from "./ProductCard";
-import { createScrollFunction, COMMON_STYLES } from "./utils";
+import {
+  createScrollFunction,
+  COMMON_STYLES,
+  BRAND_COLOR_PRIMARY,
+} from "./utils";
 
 interface CollectionProductsProps {
   collection: SnapBuy.Collection;
 }
 export const CollectionProducts = ({ collection }: CollectionProductsProps) => {
+  const history = useHistory();
   const collections = useAsyncMemo(async () => {
     if (!collection.id) return null;
     return api.getCollection(collection.id);
@@ -65,8 +71,24 @@ export const CollectionProducts = ({ collection }: CollectionProductsProps) => {
           </h2>
         </div>
         <Button
-          className="px-6 py-2 border-2 hover:border-blue-400 rounded-full font-medium text-white transition-all duration-200"
-          style={COMMON_STYLES.brandButton}
+          className="px-6 py-2 border-2 rounded-full font-medium text-white transition-all duration-200"
+          style={{
+            ...COMMON_STYLES.brandButton,
+            borderColor: "transparent",
+          }}
+          onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
+            e.currentTarget.style.borderColor = BRAND_COLOR_PRIMARY;
+            e.currentTarget.style.transform = "scale(1.05)";
+          }}
+          onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
+            e.currentTarget.style.borderColor = "transparent";
+            e.currentTarget.style.transform = "scale(1)";
+          }}
+          onClick={() => {
+            if (collection.id) {
+              history.push(`/collection/${collection.id}`);
+            }
+          }}
         >
           <Translate content="View All" />
         </Button>

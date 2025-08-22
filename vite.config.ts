@@ -23,19 +23,6 @@ export default defineConfig(async ({ mode }) => {
       }),
   ];
   return {
-    resolve: {
-      alias: {
-        "@": path.resolve("./src"),
-        Components: path.resolve("./src/Components"),
-        database: path.resolve("./src/data/db"),
-        models: path.resolve("./src/data"),
-        hooks: path.resolve("./src/hooks"),
-        api: path.resolve("./src/apis"),
-        utils: path.resolve("./utils"),
-        main: path.resolve("./"),
-        assets: path.resolve("./src/assets"),
-      },
-    },
     build: {
       rollupOptions: {
         input: {
@@ -53,6 +40,7 @@ export default defineConfig(async ({ mode }) => {
     plugins,
     server: {
       port: project.development.port,
+      host: true,
     },
     clearScreen: false,
   };

@@ -1,18 +1,74 @@
-import { toPath } from "@biqpod/app/ui/apis";
+import { Path, toPath } from "@biqpod/app/ui/apis";
 import { getTempFromStore, setTemp } from "@biqpod/app/ui/hooks";
-export var apiUrl = true
-  ? "https://developed-nickie-biqpod-7b27f741.koyeb.app/snapbuy"
-  : "http://localhost:3000/snapbuy";
-const token: string = import.meta.env.VITE_APP_TOKEN;
+import { Biqpod } from "@biqpod/app/ui/types";
+export var apiUrl =
+  process.env.NODE_ENV === "production"
+    ? "https://developed-nickie-biqpod-7b27f741.koyeb.app/snapbuy"
+    : "http://localhost:3000/snapbuy";
+const apiKey: string = import.meta.env.VITE_APP_TOKEN;
+async function getAccoutToken(): Promise<string | null> {
+  // using indexed DB
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("SnapBuyDB", 1);
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      db.createObjectStore("settings", { keyPath: "name" });
+    };
+    request.onsuccess = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      const transaction = db.transaction(["settings"], "readonly");
+      const store = transaction.objectStore("settings");
+      const getRequest = store.get("accountToken");
+      getRequest.onsuccess = () => {
+        resolve(getRequest.result ? getRequest.result.value : null);
+      };
+      getRequest.onerror = () => {
+        reject("Error getting token from IndexedDB");
+      };
+    };
+    request.onerror = () => {
+      reject("Error opening IndexedDB");
+    };
+  });
+}
+async function setAccountToken(token: string | null) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("SnapBuyDB", 1);
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      db.createObjectStore("settings", { keyPath: "name" });
+    };
+    request.onsuccess = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      const transaction = db.transaction(["settings"], "readwrite");
+      const store = transaction.objectStore("settings");
+      store.put({ name: "accountToken", value: token });
+      transaction.oncomplete = () => {
+        resolve(true);
+      };
+      transaction.onerror = () => {
+        reject("Error setting token in IndexedDB");
+      };
+    };
+    request.onerror = () => {
+      reject("Error opening IndexedDB");
+    };
+  });
+}
 // Helper function to make API requests
 async function apiRequest<T>(
-  endpoint: string,
+  endpoint: Path,
   body?: any,
   includeContentType: boolean = false
 ): Promise<T | null> {
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${token}`,
-  };
+  const token = await getAccoutToken();
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  if (apiKey) {
+    headers["x-api-key"] = apiKey;
+  }
   if (includeContentType) {
     headers["Content-Type"] = "application/json";
   }
@@ -165,6 +221,116 @@ export const api = {
     }
     return result;
   },
+  account: {
+    async checkUsername(username: string) {
+      const result = await apiRequest<{ exists: boolean }>(
+        ["account", "check"],
+        {
+          username,
+        },
+        true
+      );
+      return result?.exists;
+    },
+    async create(
+      username: string,
+      password: string,
+      information: Partial<Customer>
+    ) {
+      const result = await apiRequest<{ token?: string }>(
+        ["account", "create"],
+        {
+          username,
+          password,
+          ...information,
+        },
+        true
+      );
+      if (result?.token) {
+        setAccountToken(result.token);
+      }
+    },
+    async me() {
+      var token = await getAccoutToken();
+      if (token) {
+        const response = await apiRequest<Customer>(["account", "me"]);
+        return response;
+      }
+    },
+    async login(username: string, password: string) {
+      const result = await apiRequest<{ token?: string }>(
+        ["account", "login"],
+        {
+          username,
+          password,
+        },
+        true
+      );
+      if (result?.token) {
+        setAccountToken(result.token);
+      }
+    },
+    async changePassword(oldPassword: string, newPassword: string) {
+      var token = await getAccoutToken();
+      if (token) {
+        await apiRequest(
+          ["account", "change-password"],
+          {
+            oldPassword,
+            newPassword,
+          },
+          true
+        );
+      }
+    },
+    onUserDetect(callback: (token?: string, customer?: Customer) => void) {
+      const request = indexedDB.open("SnapBuyDB", 1);
+      request.onsuccess = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+        const storeName = "settings";
+        const key = "accountToken";
+        let lastToken: string | null = null;
+        // Poll every 1s
+        setInterval(async () => {
+          const tx = db.transaction([storeName], "readonly");
+          const store = tx.objectStore(storeName);
+          const getRequest = store.get(key);
+          getRequest.onsuccess = async () => {
+            const storedToken: string | null = getRequest.result
+              ? getRequest.result.value
+              : null;
+            const currentToken = await getAccoutToken();
+            if (storedToken !== lastToken) {
+              lastToken = storedToken;
+              const response = await this.me();
+              callback(storedToken || undefined, response || undefined);
+            }
+            // Optionally also compare with currentToken
+            if (storedToken && storedToken !== currentToken) {
+              const response = await this.me();
+              callback(storedToken || undefined, response || undefined);
+            }
+          };
+        }, 1000);
+      };
+    },
+    async logout() {
+      await setAccountToken(null);
+    },
+    async delete(password: string) {
+      var token = await getAccoutToken();
+      if (token) {
+        await apiRequest(
+          ["account", "delete"],
+          {
+            password,
+          },
+          true
+        );
+        await setAccountToken(null);
+      }
+    },
+  },
 };
 export async function getAddressFromCoords(lat: number, lon: number) {
   const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&accept-language=fr`;
@@ -184,4 +350,14 @@ export async function getAddressFromCoords(lat: number, lon: number) {
   } else {
     throw new Error("Adresse non trouvée");
   }
+}
+export interface Customer {
+  username: string;
+  createdAt: number;
+  status: "pending" | "rejected" | "accepted";
+  firstname: string;
+  lastname: string;
+  phone: string;
+  email: string;
+  meteData: Record<string, any>;
 }

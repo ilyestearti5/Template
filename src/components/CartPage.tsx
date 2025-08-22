@@ -24,11 +24,14 @@ import { Button } from "./Custom";
 import {
   getProductPrice,
   icons,
-  getDiscountedPrice,
   COMMON_STYLES,
   BRAND_COLOR,
+  BRAND_COLOR_PRIMARY,
+  COLOR_PALETTE,
 } from "./utils";
+import { Breadcrumb } from "./Breadcrumb";
 import { Geolocation } from "@capacitor/geolocation";
+import { ProductCard } from "./ProductCard";
 export const CustomCartView = () => {
   const cartItems = useFullCart();
   const history = useHistory();
@@ -37,6 +40,30 @@ export const CustomCartView = () => {
   // Location state
   const [latitude, setLatitude] = useState<Nothing | number>(null);
   const [longitude, setLongitude] = useState<Nothing | number>(null);
+  const [selectedDelivery, setSelectedDelivery] = useState<string>("express");
+  const deliveryOptions = [
+    {
+      id: "express",
+      name: "Express Delivery",
+      duration: "1-2 days",
+      price: 500,
+      icon: allIcons.solid.faShippingFast,
+    },
+    {
+      id: "standard",
+      name: "Standard Delivery",
+      duration: "3-5 days",
+      price: 200,
+      icon: allIcons.solid.faTruck,
+    },
+    {
+      id: "store",
+      name: "Store Pickup",
+      duration: "Available today",
+      price: 0,
+      icon: allIcons.solid.faStore,
+    },
+  ];
   // Get products for cart items
   // const totalPrice = useMemo(() => {
   //   if (!cartProducts) return 0;
@@ -362,6 +389,11 @@ export const CustomCartView = () => {
     });
     return result.reduce((acc, curr) => acc + curr, 0);
   }, [cartItems]);
+  const deliveryFee = useMemo(() => {
+    const option = deliveryOptions.find((o) => o.id === selectedDelivery);
+    if (!option?.price) return 0;
+    return option.price;
+  }, [selectedDelivery, deliveryOptions]);
   if (!cartItems || cartItems.length === 0) {
     return (
       <div className="bg-gray-50 min-h-screen">
@@ -395,7 +427,7 @@ export const CustomCartView = () => {
               className="font-bold text-gray-900 text-2xl"
               style={{ fontFamily: "Playfair Display, serif" }}
             >
-              <Translate content="Your cart is empty" />
+              <Translate content="your cart is empty" />
             </motion.h2>
             <motion.p
               initial={{ opacity: 0, y: 20 }}
@@ -404,7 +436,7 @@ export const CustomCartView = () => {
               className="text-gray-600"
               style={{ fontFamily: "Inter, sans-serif" }}
             >
-              <Translate content="Add some products to get started" />
+              <Translate content="add some products to get started" />
             </motion.p>
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
@@ -422,7 +454,7 @@ export const CustomCartView = () => {
                 }}
                 onClick={() => history.push("/")}
               >
-                <Translate content="Continue Shopping" />
+                <Translate content="continue shopping" />
               </Button>
             </motion.div>
           </motion.div>
@@ -432,29 +464,17 @@ export const CustomCartView = () => {
   }
   return (
     <div className="bg-white min-h-screen">
+      {/* Breadcrumb always at the top */}
+      <Breadcrumb
+        items={[
+          {
+            label: "Cart",
+            isTranslatable: true,
+          },
+        ]}
+        className="!bg-transparent !py-0 !border-none"
+      />
       <div className="mx-auto px-6 py-6 max-w-4xl">
-        {/* Breadcrumb Navigation */}
-        <div className="mb-4">
-          <div className="flex items-center gap-2 text-sm">
-            <button
-              onClick={() => history.push("/")}
-              className="hover:underline"
-              style={{
-                fontFamily: "Inter, sans-serif",
-                color: BRAND_COLOR,
-              }}
-            >
-              <Translate content="Home" />
-            </button>
-            <span className="text-gray-400">{">"}</span>
-            <span
-              className="text-gray-600"
-              style={{ fontFamily: "Inter, sans-serif" }}
-            >
-              <Translate content="Cart" />
-            </span>
-          </div>
-        </div>
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -470,8 +490,8 @@ export const CustomCartView = () => {
               className="font-bold text-gray-900 text-2xl"
               style={{ fontFamily: "Inter, sans-serif" }}
             >
-              Cart ({cartItems?.length || 0} item
-              {cartItems?.length !== 1 ? "s" : ""})
+              <Translate content="cart" /> ({cartItems?.length || 0}{" "}
+              <Translate content="item" />)
             </motion.h1>
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
@@ -487,7 +507,7 @@ export const CustomCartView = () => {
                 }}
                 onClick={() => history.push("/")}
               >
-                <Translate content="Continue Shopping" />
+                <Translate content="continue shopping" />
               </Button>
             </motion.div>
           </div>
@@ -508,10 +528,124 @@ export const CustomCartView = () => {
               onClick={() => setShowShippingForm(true)}
               disabled={isSubmittingOrder}
             >
-              <Translate content="Checkout" />
+              <Translate content="checkout" />
             </Button>
           </motion.div>
         </motion.div>
+        {/* Cart Summary Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="mb-6 p-4 border rounded-lg"
+          style={{
+            backgroundColor: `${COLOR_PALETTE.primary.light}15`, // Light background with transparency
+            borderColor: COLOR_PALETTE.primary.light,
+          }}
+        >
+          <div className="gap-4 grid grid-cols-2 md:grid-cols-4">
+            <div className="text-center">
+              <div
+                className="font-bold text-2xl"
+                style={{ color: BRAND_COLOR }}
+              >
+                {cartItems?.length || 0}
+              </div>
+              <div className="text-gray-600 text-sm">
+                <Translate content="items" />
+              </div>
+            </div>
+            <div className="text-center">
+              <div
+                className="font-bold text-2xl"
+                style={{ color: BRAND_COLOR }}
+              >
+                {cartItems?.reduce((sum, item) => sum + item.count, 0) || 0}
+              </div>
+              <div className="text-gray-600 text-sm">
+                <Translate content="quantity" />
+              </div>
+            </div>
+            <div className="text-center">
+              <div
+                className="font-bold text-2xl"
+                style={{ color: BRAND_COLOR }}
+              >
+                {totalPrice ? `${totalPrice.toFixed(0)}` : "0"}
+              </div>
+              <div className="text-gray-600 text-sm">
+                <Translate content="subtotal (da)" />
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="font-bold text-green-600 text-2xl">
+                {totalPrice ? `${(totalPrice * 0.15).toFixed(0)}` : "0"}
+              </div>
+              <div className="text-gray-600 text-sm">
+                <Translate content="savings (da)" />
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Delivery Options */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="bg-white shadow-sm mb-6 p-4 border border-gray-200 rounded-lg"
+        >
+          <h3 className="flex items-center gap-2 mb-4 font-semibold text-gray-900 text-lg">
+            <span style={{ color: BRAND_COLOR_PRIMARY }}>
+              <Icon icon={allIcons.solid.faTruck} />
+            </span>
+            <Translate content="delivery options" />
+          </h3>
+          <div className="gap-4 grid grid-cols-1 md:grid-cols-3">
+            {deliveryOptions.map((option) => (
+              <div
+                key={option.id}
+                onClick={() => setSelectedDelivery(option.id)}
+                className={`p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                  selectedDelivery === option.id
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 bg-white"
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon
+                    icon={option.icon}
+                    iconClassName={
+                      selectedDelivery === option.id
+                        ? "text-blue-600"
+                        : "text-gray-600"
+                    }
+                  />
+                  <span
+                    className={`font-medium ${
+                      selectedDelivery === option.id
+                        ? "text-blue-900"
+                        : "text-gray-900"
+                    }`}
+                  >
+                    <Translate content={option.name} />
+                  </span>
+                </div>
+                <p
+                  className={`text-sm ${
+                    selectedDelivery === option.id
+                      ? "text-blue-700"
+                      : "text-gray-600"
+                  }`}
+                >
+                  {option.duration} •{" "}
+                  {option.price || <Translate content="free" />}
+                </p>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+
         {/* Cart Items */}
         <div className="space-y-4">
           <AnimatePresence>
@@ -541,8 +675,6 @@ export const CustomCartView = () => {
                       const productPrice = product
                         ? getProductPrice(product)
                         : 0;
-                      const discountedPriceStr =
-                        getDiscountedPrice(productPrice);
                       const totalItemPrice = (
                         productPrice * item.count
                       ).toFixed(2);
@@ -573,20 +705,28 @@ export const CustomCartView = () => {
                               {/* Product specifications */}
                               <div className="space-y-1 text-gray-600 text-sm">
                                 <div style={COMMON_STYLES.interFont}>
-                                  <span className="font-medium">Fit:</span>{" "}
-                                  <span>Male Fit</span>
+                                  <span className="font-medium">
+                                    <Translate content="fit" />:
+                                  </span>{" "}
+                                  <span>
+                                    <Translate content="male fit" />
+                                  </span>
                                 </div>
                                 <div style={COMMON_STYLES.interFont}>
-                                  <span className="font-medium">Style:</span>{" "}
-                                  <span>Classic T-Shirt</span>
+                                  <span className="font-medium">
+                                    <Translate content="size" />:
+                                  </span>{" "}
+                                  <span>
+                                    <Translate content="small" />
+                                  </span>
                                 </div>
                                 <div style={COMMON_STYLES.interFont}>
-                                  <span className="font-medium">Size:</span>{" "}
-                                  <span>Small</span>
-                                </div>
-                                <div style={COMMON_STYLES.interFont}>
-                                  <span className="font-medium">Color:</span>{" "}
-                                  <span>White</span>
+                                  <span className="font-medium">
+                                    <Translate content="color" />:
+                                  </span>{" "}
+                                  <span>
+                                    <Translate content="white" />
+                                  </span>
                                 </div>
                               </div>
                             </div>
@@ -598,13 +738,6 @@ export const CustomCartView = () => {
                                   style={COMMON_STYLES.interFont}
                                 >
                                   {productPrice.toFixed(2)} DA{" "}
-                                  <span className="text-sm">each</span>
-                                </div>
-                                <div
-                                  className="text-gray-500 text-sm line-through"
-                                  style={COMMON_STYLES.interFont}
-                                >
-                                  {discountedPriceStr} DA
                                 </div>
                               </div>
                               <div
@@ -623,13 +756,7 @@ export const CustomCartView = () => {
                                 className="font-medium text-sm underline"
                                 style={COMMON_STYLES.brandText}
                               >
-                                <Translate content="Remove" />
-                              </button>
-                              <button
-                                className="font-medium text-sm underline"
-                                style={COMMON_STYLES.brandText}
-                              >
-                                <Translate content="Update" />
+                                <Translate content="remove" />
                               </button>
                             </div>
                             {/* Quantity Controls */}
@@ -651,16 +778,17 @@ export const CustomCartView = () => {
                                   iconClassName="text-xs text-gray-600"
                                 />
                               </motion.button>
-                              <motion.span
-                                key={item.count}
-                                initial={{ scale: 1.2, color: "#3B82F6" }}
-                                animate={{ scale: 1, color: "#000000" }}
-                                transition={{ duration: 0.3 }}
-                                className="w-8 font-medium text-center"
-                                style={COMMON_STYLES.interFont}
-                              >
-                                {item.count}
-                              </motion.span>
+                              <input
+                                type="number"
+                                value={item.count}
+                                onChange={(e) =>
+                                  handleQuantityChange(
+                                    item.prodId,
+                                    parseInt(e.target.value)
+                                  )
+                                }
+                                className="border-gray-300 rounded-md w-12 text-center"
+                              />
                               <motion.button
                                 whileHover={{ scale: 1.1 }}
                                 whileTap={{ scale: 0.9 }}
@@ -706,7 +834,7 @@ export const CustomCartView = () => {
                   className="font-semibold text-gray-900 text-lg"
                   style={COMMON_STYLES.interFont}
                 >
-                  <Translate content="Total" />
+                  <Translate content="total" />
                 </motion.span>
                 <motion.span
                   key={totalPrice}
@@ -733,6 +861,163 @@ export const CustomCartView = () => {
             )}
           </div>
         </motion.div>
+
+        {/* Recommended Products Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="mt-8"
+        >
+          <AsyncComponent
+            deps={[]}
+            render={async () => {
+              const allProducts = await api.getProducts();
+              const recommendedProducts = allProducts
+                ?.filter(
+                  (product) =>
+                    !cartItems?.some((item) => item.prodId === product.id)
+                )
+                .slice(0, 4);
+
+              return (
+                <div className="bg-white shadow-sm p-6 border border-gray-200 rounded-lg">
+                  <h3 className="flex items-center gap-2 mb-6 font-semibold text-gray-900 text-xl">
+                    <Icon
+                      icon={allIcons.solid.faLightbulb}
+                      iconClassName="text-yellow-500"
+                    />
+                    <Translate content="you might also like" />
+                  </h3>
+                  <div className="gap-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+                    {recommendedProducts?.map((product) => (
+                      <ProductCard product={product} key={product.id} />
+                    ))}
+                  </div>
+                </div>
+              );
+            }}
+          />
+        </motion.div>
+
+        {/* Cart Actions & Tips */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+          className="items-start gap-6 grid grid-cols-1 md:grid-cols-2 mt-8"
+        >
+          {/* Shopping Tips */}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 border border-blue-200 rounded-lg">
+            <h3 className="flex items-center gap-2 mb-4 font-semibold text-blue-900 text-lg">
+              <Icon
+                icon={allIcons.solid.faInfoCircle}
+                iconClassName="text-blue-600"
+              />
+              <Translate content="shopping tips" />
+            </h3>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <Icon
+                  icon={allIcons.solid.faCheckCircle}
+                  iconClassName="text-green-500 text-sm mt-1"
+                />
+                <p className="text-blue-800 text-sm">
+                  <Translate content="free delivery on orders over 5000 da" />
+                </p>
+              </div>
+              <div className="flex items-start gap-3">
+                <Icon
+                  icon={allIcons.solid.faCheckCircle}
+                  iconClassName="text-green-500 text-sm mt-1"
+                />
+                <p className="text-blue-800 text-sm">
+                  <Translate content="30-day return policy on all items" />
+                </p>
+              </div>
+              <div className="flex items-start gap-3">
+                <Icon
+                  icon={allIcons.solid.faCheckCircle}
+                  iconClassName="text-green-500 text-sm mt-1"
+                />
+                <p className="text-blue-800 text-sm">
+                  <Translate content="secure payment with multiple options" />
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 border border-gray-200 rounded-lg">
+            <h3 className="flex items-center gap-2 mb-4 font-semibold text-gray-900 text-lg">
+              <Icon
+                icon={allIcons.solid.faBolt}
+                iconClassName="text-yellow-500"
+              />
+              <Translate content="quick actions" />
+            </h3>
+            <div className="space-y-3">
+              <Button
+                className="hover:bg-red-50 px-4 py-2 border border-red-300 rounded-lg w-full font-medium text-red-600 transition-all duration-200"
+                style={{ fontFamily: "Inter, sans-serif" }}
+                onClick={() => {
+                  if (confirm("Are you sure you want to clear your cart?")) {
+                    deleteCart();
+                    showToast("Cart cleared", "info");
+                  }
+                }}
+              >
+                <Icon icon={allIcons.solid.faTrash} iconClassName="mr-2" />
+                <Translate content="clear cart" />
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Order Summary Breakdown */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.6 }}
+          className="bg-white shadow-sm mt-8 p-6 border border-gray-200 rounded-lg"
+        >
+          <h3 className="flex items-center gap-2 mb-4 font-semibold text-gray-900 text-lg">
+            <Icon
+              icon={allIcons.solid.faCalculator}
+              iconClassName="text-blue-600"
+            />
+            <Translate content="order summary" />
+          </h3>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">
+                <Translate content="subtotal" />
+              </span>
+              <span className="font-medium">
+                {totalPrice ? `${totalPrice.toFixed(2)} DA` : "0.00 DA"}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">
+                <Translate content="delivery fee" />
+              </span>
+              <span className="font-medium">{deliveryFee.toFixed(2)} DA</span>
+            </div>
+
+            <hr className="my-3" />
+            <div className="flex justify-between items-center font-bold text-lg">
+              <span>
+                <Translate content="total" />
+              </span>
+              <span style={{ color: BRAND_COLOR }}>
+                {totalPrice
+                  ? `${(totalPrice + deliveryFee).toFixed(2)} DA`
+                  : `${deliveryFee.toFixed(2)} DA`}
+              </span>
+            </div>
+          </div>
+        </motion.div>
+
         {/* Shipping Information Form */}
         <AnimatePresence>
           {showShippingForm && (
@@ -755,7 +1040,7 @@ export const CustomCartView = () => {
                     className="font-bold text-gray-900 text-xl"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   >
-                    <Translate content="Shipping Information" />
+                    <Translate content="shipping information" />
                   </h2>
                   <button
                     onClick={() => setShowShippingForm(false)}
@@ -780,13 +1065,13 @@ export const CustomCartView = () => {
                       className="block mb-1 font-medium text-gray-700 text-sm"
                       style={{ fontFamily: "Inter, sans-serif" }}
                     >
-                      <Translate content="First Name" />
+                      <Translate content="first name" />
                     </label>
                     <input
                       type="text"
                       value={firstname}
                       onChange={(e) => setFirstname(e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 w-full"
+                      className="px-3 py-2 border border-gray-300 border-solid rounded-md focus:outline-none focus:ring-2 w-full"
                       style={
                         {
                           fontFamily: "Inter, sans-serif",
@@ -802,13 +1087,13 @@ export const CustomCartView = () => {
                       className="block mb-1 font-medium text-gray-700 text-sm"
                       style={{ fontFamily: "Inter, sans-serif" }}
                     >
-                      <Translate content="Last Name" />
+                      <Translate content="last name" />
                     </label>
                     <input
                       type="text"
                       value={lastname}
                       onChange={(e) => setLastname(e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 w-full"
+                      className="px-3 py-2 border border-gray-300 border-solid rounded-md focus:outline-none focus:ring-2 w-full"
                       style={
                         {
                           fontFamily: "Inter, sans-serif",
@@ -824,13 +1109,13 @@ export const CustomCartView = () => {
                       className="block mb-1 font-medium text-gray-700 text-sm"
                       style={{ fontFamily: "Inter, sans-serif" }}
                     >
-                      <Translate content="Phone Number" />
+                      <Translate content="phone number" />
                     </label>
                     <input
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 w-full"
+                      className="px-3 py-2 border border-gray-300 border-solid rounded-md focus:outline-none focus:ring-2 w-full"
                       style={
                         {
                           fontFamily: "Inter, sans-serif",
@@ -846,7 +1131,7 @@ export const CustomCartView = () => {
                       className="block mb-1 font-medium text-gray-700 text-sm"
                       style={{ fontFamily: "Inter, sans-serif" }}
                     >
-                      <Translate content="Wilaya" />
+                      <Translate content="wilaya" />
                     </label>
                     <input
                       type="text"
@@ -854,7 +1139,7 @@ export const CustomCartView = () => {
                       onChange={(e) => handleWilayaChange(e.target.value)}
                       onKeyDown={handleWilayaKeyDown}
                       onFocus={() => setShowWilayaDropdown(true)}
-                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 w-full"
+                      className="px-3 py-2 border border-gray-300 border-solid rounded-md focus:outline-none focus:ring-2 w-full"
                       style={
                         {
                           fontFamily: "Inter, sans-serif",
@@ -897,14 +1182,14 @@ export const CustomCartView = () => {
                       className="block mb-1 font-medium text-gray-700 text-sm"
                       style={{ fontFamily: "Inter, sans-serif" }}
                     >
-                      <Translate content="Address" />
+                      <Translate content="address" />
                     </label>
                     <div className="flex gap-2">
                       <textarea
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
                         rows={3}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                        className="flex-1 px-3 py-2 border border-gray-300 border-solid rounded-md focus:outline-none focus:ring-2 min-h-[80px]"
                         style={
                           {
                             fontFamily: "Inter, sans-serif",
@@ -954,7 +1239,7 @@ export const CustomCartView = () => {
                       style={{ fontFamily: "Inter, sans-serif" }}
                       onClick={() => setShowShippingForm(false)}
                     >
-                      <Translate content="Cancel" />
+                      <Translate content="cancel" />
                     </Button>
                   </motion.div>
                   <motion.div
@@ -982,10 +1267,10 @@ export const CustomCartView = () => {
                             icon={allIcons.solid.faSpinner}
                             iconClassName="mr-2 animate-spin"
                           />
-                          <Translate content="Processing..." />
+                          <Translate content="processing..." />
                         </motion.div>
                       ) : (
-                        <Translate content="Place Order" />
+                        <Translate content="place order" />
                       )}
                     </Button>
                   </motion.div>
@@ -1043,7 +1328,7 @@ export const CustomCartView = () => {
                     transition={{ delay: 0.3, duration: 0.4 }}
                     className="mb-2 font-semibold text-gray-900 text-lg"
                   >
-                    Remove Product
+                    <Translate content="remove product" />
                   </motion.h3>
                   <motion.p
                     initial={{ opacity: 0, y: -10 }}
@@ -1051,8 +1336,9 @@ export const CustomCartView = () => {
                     transition={{ delay: 0.4, duration: 0.4 }}
                     className="mb-6 text-gray-600"
                   >
-                    Are you sure you want to remove "
-                    {productToDelete?.productName}" from your cart?
+                    <Translate content="are you sure you want to remove" /> "
+                    {productToDelete?.productName}"{" "}
+                    <Translate content="from your cart?" />
                   </motion.p>
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
@@ -1066,7 +1352,7 @@ export const CustomCartView = () => {
                       onClick={cancelDeleteProduct}
                       className={`flex-1 px-4 py-2 border border-gray-300 rounded-lg ${COMMON_STYLES.interFont} text-gray-700 hover:bg-gray-50 transition-all duration-200`}
                     >
-                      Cancel
+                      <Translate content="cancel" />
                     </motion.button>
                     <motion.button
                       whileHover={{ scale: 1.05 }}
@@ -1074,7 +1360,7 @@ export const CustomCartView = () => {
                       onClick={confirmDeleteProduct}
                       className={`flex-1 px-4 py-2 bg-red-600 text-white rounded-lg ${COMMON_STYLES.interFont} hover:bg-red-700 transition-all duration-200`}
                     >
-                      Remove
+                      <Translate content="remove" />
                     </motion.button>
                   </motion.div>
                 </div>

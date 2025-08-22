@@ -74,6 +74,7 @@ declare namespace SnapBuy {
       newProduct?: boolean;
       newClient?: boolean;
     };
+    orderVarientId?: string | null;
   }
   type Platform =
     | "facebook"
@@ -200,6 +201,16 @@ declare namespace SnapBuy {
     createdAt?: number;
     updatedAt?: number;
   }
+  interface Varient {
+    id?: string;
+    name?: string;
+    description?: string;
+    uid?: string;
+    storeId?: string;
+    createdAt?: number;
+    status: "public" | "private";
+    expression?: string;
+  }
   interface Product {
     storeId?: string;
     id?: string;
@@ -214,14 +225,10 @@ declare namespace SnapBuy {
     type?: "single" | "multiple";
     limited?: boolean;
     single?: {
-      price?: number;
+      client?: number;
+      customer?: number;
     };
-    metaData?: Partial<
-      Record<
-        string,
-        import("@biqpod/app/ui/types").SettingValueType[keyof import("@biqpod/app/ui/types").SettingValueType]
-      >
-    >;
+    metaData?: Partial<Record<string, SettingType[keyof SettingType]>>;
     multiple?: {
       prices?: {
         quantity: number;
@@ -229,6 +236,7 @@ declare namespace SnapBuy {
       }[];
     };
     brandId?: string;
+    varientId: string;
   }
 }
 declare interface SnapBuyApi {
