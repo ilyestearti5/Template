@@ -9,6 +9,7 @@ import { CustomCartView } from "./CartPage";
 import { FavoritesPage } from "./FavoritesPage";
 import { HomePage, langSettingId } from "./HomePage";
 import { OfferPage } from "./OfferPage";
+import { OffersPage } from "./OffersPage";
 import { LoadingProgressBar } from "./LoadingProgressBar";
 import { CollectionPage } from "./CollectionPage";
 import { SearchPage } from "./Search";
@@ -26,11 +27,19 @@ import { StatusBar, Style } from "@capacitor/status-bar";
 import { BrandPage } from "./BrandPage";
 import { ClientSignIn } from "./ClientSignIn";
 import { CookiePolicy } from "./CookiePolicy";
+import { ProductPage } from "./ProductPage";
+import { OrderSuccessPage } from "./OrderSuccessPage";
+import { CustomerOrdersPage } from "./CustomerOrdersPage";
+import { OrderDetailsPage } from "./OrderDetailsPage";
+import NotFoundPage from "./NotFoundPage";
+// Create Pixel Context
+// Hook to use pixels in components
 // Search Products Page Component
 export const StoreRoute = () => {
   initCart();
   initFavorites();
   initLangs();
+  // Initialize store and pixels
   useEffect(() => {
     // set status bar color
     const color = BRAND_COLOR;
@@ -89,11 +98,17 @@ export const StoreRoute = () => {
             <Route path="/brand/:brandId">
               <BrandPage />
             </Route>
+            <Route path="/product/:productId">
+              <ProductPage />
+            </Route>
             <Route path="/search">
               <SearchPage />
             </Route>
             <Route path="/collection/:collectionId">
               <CollectionPage />
+            </Route>
+            <Route exact path="/offers">
+              <OffersPage />
             </Route>
             <Route path="/offer/:offerId">
               <OfferPage />
@@ -115,6 +130,19 @@ export const StoreRoute = () => {
             </Route>
             <Route path="/cookie-policy">
               <CookiePolicy />
+            </Route>
+            <Route path="/order-success">
+              <OrderSuccessPage />
+            </Route>
+            <Route path="/orders">
+              <CustomerOrdersPage />
+            </Route>
+            <Route path="/order/:orderId">
+              <OrderDetailsPage />
+            </Route>
+            {/* 404 - Catch all unmatched routes */}
+            <Route>
+              <NotFoundPage />
             </Route>
           </Switch>
         </div>

@@ -18,7 +18,7 @@ import { useState, useRef, useMemo, useEffect } from "react";
 import { useHistory } from "react-router";
 import { Link } from "react-router-dom";
 import { api } from "../api";
-import { useFavoritesCount, useCartCounts } from "../hooks";
+import { useFavoritesCount, useCartCounts, useIsSignedIn } from "../hooks";
 import { CollectionProducts } from "./CollectionProducts";
 import { Button } from "./Custom";
 import { ProductCard } from "./ProductCard";
@@ -28,6 +28,7 @@ import {
   COLOR_PALETTE,
   BRAND_COLOR_PRIMARY,
   BRAND_COLOR_ACCENT,
+  useArabic,
 } from "./utils";
 import { setSettingValue } from "@biqpod/app/ui/hooks";
 export const langSettingId = "window/lang.enum";
@@ -50,10 +51,15 @@ export const HomePage = () => {
   const history = useHistory();
   const favoritesCount = useFavoritesCount();
   const cartCount = useCartCounts();
+  const isSignedIn = useIsSignedIn();
   // Search placeholder cycling with typing animation
   const [currentPlaceholderIndex, setCurrentPlaceholderIndex] = useState(0);
   const [typedText, setTypedText] = useState("");
   const [isTyping, setIsTyping] = useState(true);
+  // Customer review form states
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewMessage, setReviewMessage] = useState("");
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   // Initialize cart and favorites
   // Scroll to top functionality
   const [showScrollToTop, setShowScrollToTop] = useState(false);
@@ -90,7 +96,12 @@ export const HomePage = () => {
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
   }, [showLangMenu]);
-
+  useEffect(() => {
+    if (showSearch) {
+      setShowMobileMenu(false);
+      setShowLangMenu(false);
+    }
+  }, [showSearch]);
   // Close mobile menu on window resize
   useEffect(() => {
     const handleResize = () => {
@@ -101,7 +112,6 @@ export const HomePage = () => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
-
   // Close mobile menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -116,6 +126,7 @@ export const HomePage = () => {
         document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [showMobileMenu]);
+  const isArabic = useArabic();
   // Scroll to top function
   const scrollToTop = () => {
     if (scrollContainerRef.current) {
@@ -155,6 +166,29 @@ export const HomePage = () => {
       });
       // Check scrollability after animation
       setTimeout(checkFeaturedScrollability, 300);
+    }
+  };
+  // Handle customer review submission
+  const handleReviewSubmit = async () => {
+    if (!reviewMessage.trim()) {
+      alert("Please enter your review message");
+      return;
+    }
+    setIsSubmittingReview(true);
+    try {
+      // Here you would typically send the review to your backend
+      // For now, we'll just simulate a successful submission
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Reset form
+      setReviewMessage("");
+      setReviewRating(5);
+      alert(
+        "Thank you for your review! It will be reviewed and published soon."
+      );
+    } catch (error) {
+      alert("Failed to submit review. Please try again.");
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
   // Hero banner images
@@ -323,9 +357,12 @@ export const HomePage = () => {
       {/* Offers Banner - Show if there are offers */}
       {offers && offers.length > 0 && (
         <div
-          className="py-3"
+          className="py-3 cursor-pointer"
           style={{
             background: COLOR_PALETTE.gradients.primary,
+          }}
+          onClick={() => {
+            history.push("/offers");
           }}
         >
           <div className="mx-auto px-4 max-w-7xl">
@@ -355,7 +392,6 @@ export const HomePage = () => {
                 {store?.name || "SnapBuy"}
               </h1>
             </div>
-
             {/* Desktop Navigation */}
             <nav
               className="max-md:hidden md:flex items-center gap-2"
@@ -398,6 +434,19 @@ export const HomePage = () => {
                   </span>
                 )}
               </button>
+              {/* Orders Button - Only show if signed in */}
+              {isSignedIn && (
+                <button
+                  onClick={() => history.push("/orders")}
+                  className="relative flex justify-center items-center hover:bg-gray-100 rounded-full w-[40px] h-[40px] text-gray-700 hover:text-gray-900 transition-colors"
+                  title="My Orders"
+                >
+                  <Icon
+                    icon={allIcons.solid.faClipboardList}
+                    iconClassName="text-xl"
+                  />
+                </button>
+              )}
               {/* Cart Button */}
               <button
                 onClick={() => history.push("/cart")}
@@ -464,136 +513,396 @@ export const HomePage = () => {
                 </AnimatePresence>
               </button>
             </nav>
-
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setShowMobileMenu((prev) => !prev)}
-              className="md:hidden flex justify-center items-center hover:bg-gray-100 rounded-full w-[40px] h-[40px] text-gray-700 hover:text-gray-900 transition-colors"
-            >
-              <Icon
-                icon={
-                  showMobileMenu
-                    ? allIcons.solid.faXmark
-                    : allIcons.solid.faBars
-                }
-                iconClassName="text-xl"
-              />
-            </button>
+            {/* Mobile Navigation */}
+            <div className="md:hidden flex items-center gap-2">
+              {/* Mobile Search Button */}
+              <button
+                onClick={() => {
+                  setShowSearch((s) => !s);
+                }}
+                className="flex justify-center items-center hover:bg-gray-100 rounded-full w-[40px] h-[40px] text-gray-700 hover:text-gray-900 transition-colors"
+              >
+                <Icon
+                  icon={showSearch ? allIcons.solid.faXmark : icons.search}
+                  iconClassName={tw(
+                    "text-xl transition-transform",
+                    showSearch && "rotate-90"
+                  )}
+                />
+              </button>
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setShowMobileMenu((prev) => !prev)}
+                className="flex justify-center items-center hover:bg-gray-100 rounded-full w-[40px] h-[40px] text-gray-700 hover:text-gray-900 transition-colors"
+              >
+                <Icon
+                  icon={
+                    showMobileMenu
+                      ? allIcons.solid.faXmark
+                      : allIcons.solid.faBars
+                  }
+                  iconClassName="text-xl"
+                />
+              </button>
+            </div>
           </div>
         </div>
-
         {/* Mobile Menu */}
         <AnimatePresence>
           {showMobileMenu && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-              className="md:hidden bg-white shadow-lg border-gray-200 border-t"
+              initial={{ opacity: 0, height: 0, y: -20 }}
+              animate={{
+                opacity: 1,
+                height: "auto",
+                y: 0,
+                transition: {
+                  duration: 0.4,
+                  ease: [0.25, 0.46, 0.45, 0.94],
+                  opacity: { duration: 0.3 },
+                  height: { duration: 0.4 },
+                  y: { duration: 0.3, delay: 0.1 },
+                },
+              }}
+              exit={{
+                opacity: 0,
+                height: 0,
+                y: -20,
+                transition: {
+                  duration: 0.3,
+                  ease: "easeInOut",
+                  opacity: { duration: 0.2 },
+                  height: { duration: 0.3, delay: 0.1 },
+                  y: { duration: 0.2 },
+                },
+              }}
+              className="md:hidden bg-white shadow-xl backdrop-blur-sm border-gray-200 border-t overflow-hidden"
+              style={{
+                background:
+                  "linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(255,255,255,1))",
+                backdropFilter: "blur(10px)",
+              }}
             >
-              <div className="mx-auto px-4 py-4 max-w-7xl">
-                <div className="space-y-4">
-                  {/* Search */}
-                  <button
-                    onClick={() => {
-                      setShowSearch((s) => !s);
-                      setShowMobileMenu(false);
-                    }}
-                    className="flex items-center gap-3 hover:bg-gray-50 px-3 py-2 rounded-lg w-full text-gray-700 hover:text-gray-900 text-left transition-colors"
-                  >
-                    <Icon icon={icons.search} iconClassName="text-lg" />
-                    <span className="font-medium">
-                      <Translate content="Search" />
-                    </span>
-                  </button>
-
+              <motion.div
+                className="mx-auto px-4 py-6 max-w-7xl"
+                initial={{ opacity: 0 }}
+                animate={{
+                  opacity: 1,
+                  transition: { duration: 0.4, delay: 0.2 },
+                }}
+                exit={{
+                  opacity: 0,
+                  transition: { duration: 0.2 },
+                }}
+              >
+                <div className="space-y-3">
                   {/* Favorites */}
-                  <button
+                  <motion.button
+                    initial={{ opacity: 0, x: -30, scale: 0.9 }}
+                    animate={{
+                      opacity: 1,
+                      x: 0,
+                      scale: 1,
+                      transition: {
+                        duration: 0.4,
+                        delay: 0.3,
+                        ease: "easeOut",
+                      },
+                    }}
+                    exit={{
+                      opacity: 0,
+                      x: -20,
+                      scale: 0.95,
+                      transition: { duration: 0.2 },
+                    }}
+                    whileHover={{
+                      scale: 1.02,
+                      x: 4,
+                      transition: { duration: 0.2 },
+                    }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       history.push("/favorites");
                       setShowMobileMenu(false);
                     }}
-                    className="flex items-center gap-3 hover:bg-gray-50 px-3 py-2 rounded-lg w-full text-gray-700 hover:text-gray-900 text-left transition-colors"
+                    className="group flex items-center gap-4 hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 px-4 py-3 rounded-xl w-full text-gray-700 hover:text-gray-900 text-left transition-all duration-300"
                   >
-                    <div className="relative">
-                      <Icon
-                        icon={
-                          favoritesCount > 0
-                            ? allIcons.solid.faHeart
-                            : allIcons.regular.faHeart
-                        }
-                        iconClassName={tw(
-                          "text-lg",
-                          favoritesCount > 0 ? "text-red-500" : ""
-                        )}
-                      />
+                    <div className="relative flex justify-center items-center bg-red-100 group-hover:bg-red-200 rounded-lg w-10 h-10 transition-colors duration-300">
+                      <motion.div
+                        whileHover={{
+                          scale: 1.2,
+                          transition: { duration: 0.3 },
+                        }}
+                      >
+                        <Icon
+                          icon={
+                            favoritesCount > 0
+                              ? allIcons.solid.faHeart
+                              : allIcons.regular.faHeart
+                          }
+                          iconClassName={tw(
+                            "text-lg transition-colors duration-300",
+                            favoritesCount > 0 ? "text-red-600" : "text-red-500"
+                          )}
+                        />
+                      </motion.div>
                       {favoritesCount > 0 && (
-                        <span className="top-0 -right-2 absolute flex justify-center items-center bg-red-500 rounded-full w-4 h-4 font-bold text-white text-xs">
+                        <motion.span
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          whileHover={{ scale: 1.1 }}
+                          className="top-0 -right-1 absolute flex justify-center items-center bg-red-500 shadow-lg rounded-full w-5 h-5 font-bold text-white text-xs"
+                        >
                           {favoritesCount > 99 ? "99+" : favoritesCount}
-                        </span>
+                        </motion.span>
                       )}
                     </div>
-                    <span className="font-medium">
+                    <span className="font-semibold group-hover:text-red-700 text-lg transition-colors">
                       <Translate content="Favorites" />
                     </span>
-                  </button>
-
+                    <motion.div
+                      className="opacity-0 group-hover:opacity-100 ml-auto transition-opacity duration-300"
+                      whileHover={{ x: 3 }}
+                    >
+                      <Icon
+                        icon={allIcons.solid.faChevronRight}
+                        iconClassName="text-sm text-gray-400"
+                      />
+                    </motion.div>
+                  </motion.button>
+                  {/* Orders - Only show if signed in */}
+                  {isSignedIn && (
+                    <motion.button
+                      initial={{ opacity: 0, x: -30, scale: 0.9 }}
+                      animate={{
+                        opacity: 1,
+                        x: 0,
+                        scale: 1,
+                        transition: {
+                          duration: 0.4,
+                          delay: 0.4,
+                          ease: "easeOut",
+                        },
+                      }}
+                      exit={{
+                        opacity: 0,
+                        x: -20,
+                        scale: 0.95,
+                        transition: { duration: 0.2, delay: 0.05 },
+                      }}
+                      whileHover={{
+                        scale: 1.02,
+                        x: 4,
+                        transition: { duration: 0.2 },
+                      }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        history.push("/orders");
+                        setShowMobileMenu(false);
+                      }}
+                      className="group flex items-center gap-4 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 px-4 py-3 rounded-xl w-full text-gray-700 hover:text-gray-900 text-left transition-all duration-300"
+                    >
+                      <motion.div
+                        whileHover={{ rotate: 10 }}
+                        transition={{ duration: 0.3 }}
+                        className="flex justify-center items-center bg-green-100 group-hover:bg-green-200 rounded-lg w-10 h-10 transition-colors duration-300"
+                      >
+                        <Icon
+                          icon={allIcons.solid.faClipboardList}
+                          iconClassName="text-lg text-green-600"
+                        />
+                      </motion.div>
+                      <span className="font-semibold group-hover:text-green-700 text-lg transition-colors">
+                        <Translate content="My Orders" />
+                      </span>
+                      <motion.div
+                        className="opacity-0 group-hover:opacity-100 ml-auto transition-opacity duration-300"
+                        whileHover={{ x: 3 }}
+                      >
+                        <Icon
+                          icon={allIcons.solid.faChevronRight}
+                          iconClassName="text-sm text-gray-400"
+                        />
+                      </motion.div>
+                    </motion.button>
+                  )}
                   {/* Cart */}
-                  <button
+                  <motion.button
+                    initial={{ opacity: 0, x: -30, scale: 0.9 }}
+                    animate={{
+                      opacity: 1,
+                      x: 0,
+                      scale: 1,
+                      transition: {
+                        duration: 0.4,
+                        delay: isSignedIn ? 0.5 : 0.4,
+                        ease: "easeOut",
+                      },
+                    }}
+                    exit={{
+                      opacity: 0,
+                      x: -20,
+                      scale: 0.95,
+                      transition: {
+                        duration: 0.2,
+                        delay: isSignedIn ? 0.1 : 0.05,
+                      },
+                    }}
+                    whileHover={{
+                      scale: 1.02,
+                      x: 4,
+                      transition: { duration: 0.2 },
+                    }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       history.push("/cart");
                       setShowMobileMenu(false);
                     }}
-                    className="flex items-center gap-3 hover:bg-gray-50 px-3 py-2 rounded-lg w-full text-gray-700 hover:text-gray-900 text-left transition-colors"
+                    className="group flex items-center gap-4 hover:bg-gradient-to-r hover:from-purple-50 hover:to-violet-50 px-4 py-3 rounded-xl w-full text-gray-700 hover:text-gray-900 text-left transition-all duration-300"
                   >
-                    <div className="relative">
-                      <Icon icon={icons.shoppingCart} iconClassName="text-lg" />
+                    <div className="relative flex justify-center items-center bg-purple-100 group-hover:bg-purple-200 rounded-lg w-10 h-10 transition-colors duration-300">
+                      <motion.div
+                        whileHover={{
+                          rotate: [-5, 5, -5, 0],
+                          transition: { duration: 0.5 },
+                        }}
+                      >
+                        <Icon
+                          icon={icons.shoppingCart}
+                          iconClassName="text-lg text-purple-600"
+                        />
+                      </motion.div>
                       {cartCount > 0 && (
-                        <span
-                          className="top-0 -right-2 absolute flex justify-center items-center rounded-full w-4 h-4 font-bold text-white text-xs"
+                        <motion.span
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          whileHover={{ scale: 1.1 }}
+                          className="top-0 -right-1 absolute flex justify-center items-center shadow-lg rounded-full w-5 h-5 font-bold text-white text-xs"
                           style={{ backgroundColor: BRAND_COLOR_PRIMARY }}
                         >
                           {cartCount > 99 ? "99+" : cartCount}
-                        </span>
+                        </motion.span>
                       )}
                     </div>
-                    <span className="font-medium">
+                    <span className="font-semibold group-hover:text-purple-700 text-lg transition-colors">
                       <Translate content="Cart" />
                     </span>
-                  </button>
-
+                    <motion.div
+                      className="opacity-0 group-hover:opacity-100 ml-auto transition-opacity duration-300"
+                      whileHover={{ x: 3 }}
+                    >
+                      <Icon
+                        icon={allIcons.solid.faChevronRight}
+                        iconClassName="text-sm text-gray-400"
+                      />
+                    </motion.div>
+                  </motion.button>
                   {/* Language Selector */}
-                  <div className="pt-4 border-gray-200 border-t">
-                    <div className="mb-2 font-medium text-gray-900 text-sm">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                      transition: {
+                        duration: 0.4,
+                        delay: isSignedIn ? 0.6 : 0.5,
+                        ease: "easeOut",
+                      },
+                    }}
+                    exit={{
+                      opacity: 0,
+                      y: 10,
+                      transition: { duration: 0.2, delay: 0.15 },
+                    }}
+                    className="pt-6 border-gray-200 border-t"
+                  >
+                    <motion.div
+                      className="mb-4 font-bold text-gray-900 text-base"
+                      whileHover={{ x: 2 }}
+                    >
                       <Translate content="Language" />
-                    </div>
+                    </motion.div>
                     <div className="space-y-2">
                       {[
-                        { id: "ar", name: "🇸🇦 العربية" },
-                        { id: "fr", name: "🇫🇷 Français" },
-                        { id: "en", name: "🇬🇧 English" },
-                      ].map(({ id, name }) => (
-                        <button
+                        { id: "ar", name: "🇸🇦 العربية", color: "emerald" },
+                        { id: "fr", name: "🇫🇷 Français", color: "blue" },
+                        { id: "en", name: "🇬🇧 English", color: "red" },
+                      ].map(({ id, name, color }, index) => (
+                        <motion.button
                           key={id}
+                          initial={{ opacity: 0, x: -20, scale: 0.9 }}
+                          animate={{
+                            opacity: 1,
+                            x: 0,
+                            scale: 1,
+                            transition: {
+                              duration: 0.3,
+                              delay: (isSignedIn ? 0.7 : 0.6) + index * 0.1,
+                              ease: "easeOut",
+                            },
+                          }}
+                          exit={{
+                            opacity: 0,
+                            x: -15,
+                            scale: 0.95,
+                            transition: {
+                              duration: 0.15,
+                              delay: 0.2 + index * 0.05,
+                            },
+                          }}
+                          whileHover={{
+                            scale: 1.02,
+                            x: 6,
+                            transition: { duration: 0.2 },
+                          }}
+                          whileTap={{ scale: 0.98 }}
                           className={tw(
-                            "block w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-left transition-colors",
+                            "block w-full px-4 py-3 rounded-xl text-left transition-all duration-300 group relative overflow-hidden",
                             langSetting === id
-                              ? "bg-blue-50 font-semibold text-blue-600"
-                              : "text-gray-700"
+                              ? `bg-gradient-to-r from-${color}-100 to-${color}-200 font-bold text-${color}-700 shadow-md border-2 border-solid border-${color}-300`
+                              : "text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 border-2 border-solid border-transparent hover:border-gray-200"
                           )}
                           onClick={() => {
                             setSettingValue(langSettingId, id);
                             setShowMobileMenu(false);
                           }}
                         >
-                          {name}
-                        </button>
+                          <motion.div
+                            className="flex justify-between items-center"
+                            whileHover={{ x: 2 }}
+                          >
+                            <span className="font-semibold text-lg">
+                              {name}
+                            </span>
+                            {langSetting === id && (
+                              <motion.div
+                                initial={{ scale: 0, rotate: -180 }}
+                                animate={{ scale: 1, rotate: 0 }}
+                                transition={{ duration: 0.3, delay: 0.1 }}
+                                className={`text-${color}-600`}
+                              >
+                                <Icon
+                                  icon={allIcons.solid.faCheck}
+                                  iconClassName="text-sm"
+                                />
+                              </motion.div>
+                            )}
+                          </motion.div>
+                          {langSetting === id && (
+                            <motion.div
+                              initial={{ scaleX: 0 }}
+                              animate={{ scaleX: 1 }}
+                              transition={{ duration: 0.5, delay: 0.2 }}
+                              className={`absolute bottom-0 left-0 h-1 bg-gradient-to-r from-${color}-400 to-${color}-600 origin-left`}
+                              style={{ width: "100%" }}
+                            />
+                          )}
+                        </motion.button>
                       ))}
                     </div>
-                  </div>
+                  </motion.div>
                 </div>
-              </div>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -721,8 +1030,10 @@ export const HomePage = () => {
           className="flex h-full transition-transform duration-1000 ease-in-out"
           style={{
             width: `${bannerImages.length * 100}%`,
-            transform: `translateX(-${
-              currentBannerIndex * (100 / bannerImages.length)
+            transform: `translateX(${
+              (isArabic ? 1 : -1) *
+              currentBannerIndex *
+              (100 / bannerImages.length)
             }%)`,
           }}
         >
@@ -774,7 +1085,7 @@ export const HomePage = () => {
           </div>
         </div>
         {/* Banner Indicators */}
-        <div className="bottom-4 left-1/2 absolute flex space-x-2 -translate-x-1/2 transform">
+        <div className="bottom-4 left-1/2 absolute flex gap-3 -translate-x-1/2 transform">
           {bannerImages.map((_, index) => (
             <button
               key={index}
@@ -817,7 +1128,7 @@ export const HomePage = () => {
             >
               <Translate content="brands to" />{" "}
               <span className="bg-gradient-to-r from-blue-200 to-blue-300 px-2 py-1 rounded italic">
-                <Translate content="Four R" />
+                FOUR R
               </span>
             </h2>
             <p
@@ -1031,6 +1342,7 @@ export const HomePage = () => {
       {/* Offers Section */}
       {offers && offers.length > 0 && (
         <div
+          id="offers"
           className="py-8"
           style={{
             background: "linear-gradient(to right, #E3F2FD, #BBDEFB)",
@@ -1044,7 +1356,7 @@ export const HomePage = () => {
               🔥 <Translate content="Special Offers" />
             </h2>
             <div className="gap-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-              {offers.map((offer) => (
+              {offers.slice(0, 6).map((offer) => (
                 <div
                   key={offer.id}
                   className="bg-white hover:shadow-lg border border-gray-300 border-solid transition-all duration-200 cursor-pointer"
@@ -1092,6 +1404,33 @@ export const HomePage = () => {
                 </div>
               ))}
             </div>
+            {/* View All Offers Button */}
+            {offers.length > 6 && (
+              <div className="flex justify-center mt-8">
+                <Button
+                  onClick={() => history.push("/offers")}
+                  className="group hover:bg-white px-8 py-4 border-2 border-white rounded-full font-bold text-white hover:text-gray-800 text-lg transition-all duration-300"
+                  style={{
+                    backgroundColor: "transparent",
+                    borderColor: "white",
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon
+                      icon={allIcons.solid.faEye}
+                      iconClassName="text-lg group-hover:scale-110 transition-transform"
+                    />
+                    <span>
+                      <Translate content="View All Offers" /> ({offers.length})
+                    </span>
+                    <Icon
+                      icon={allIcons.solid.faArrowRight}
+                      iconClassName="text-lg group-hover:translate-x-1 transition-transform"
+                    />
+                  </div>
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1237,7 +1576,7 @@ export const HomePage = () => {
           </div>
         </div>
       </div>
-      {/* Watch Collection Section */}
+      {/* Clothing Collection Section */}
       <div className="bg-white py-16">
         <div className="mx-auto px-4 max-w-7xl">
           <div className="mb-12 text-center">
@@ -1245,17 +1584,17 @@ export const HomePage = () => {
               className="mb-4 font-bold text-gray-900 text-3xl md:text-4xl"
               style={{ fontFamily: "Playfair Display, serif" }}
             >
-              <Translate content="Luxury Watch Collection" />
+              <Translate content="Fashion Collection" />
             </h2>
             <p
               className="mx-auto max-w-2xl text-gray-600 text-lg"
               style={{ fontFamily: "Inter, sans-serif" }}
             >
-              <Translate content="Discover our premium collection of timepieces that blend elegance with precision" />
+              <Translate content="Discover our premium collection of clothing for everyone in the family" />
             </p>
           </div>
           <div className="gap-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            {/* Watch Photo 1 - Person with watch */}
+            {/* Men's Clothing - T-shirts & Jeans */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1263,13 +1602,13 @@ export const HomePage = () => {
               className="group relative rounded-lg overflow-hidden"
             >
               <img
-                src="https://images.pexels.com/photos/1697214/pexels-photo-1697214.jpeg?auto=compress&cs=tinysrgb&w=600"
-                alt="Elegant watch on wrist"
+                src="https://images.pexels.com/photos/2897883/pexels-photo-2897883.jpeg?auto=compress&cs=tinysrgb&w=600"
+                alt="Men's casual clothing collection"
                 className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.src =
-                    "https://via.placeholder.com/600x400/e5e7eb/6b7280?text=Watch+Collection";
+                    "https://via.placeholder.com/600x400/e5e7eb/6b7280?text=Men's+Fashion";
                 }}
               />
               <div className="absolute inset-0 bg-black bg-opacity-40 group-hover:bg-opacity-30 transition-all duration-300">
@@ -1278,15 +1617,15 @@ export const HomePage = () => {
                     className="mb-2 font-bold text-xl"
                     style={{ fontFamily: "Playfair Display, serif" }}
                   >
-                    <Translate content="Classic Elegance" />
+                    <Translate content="Men's Collection" />
                   </h3>
                   <p className="opacity-90 text-sm">
-                    <Translate content="Timeless design for every occasion" />
+                    <Translate content="T-shirts, jeans & casual wear" />
                   </p>
                 </div>
               </div>
             </motion.div>
-            {/* Watch Photo 2 - Someone looking at watch */}
+            {/* Women's Clothing - Dresses & Tops */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1294,13 +1633,13 @@ export const HomePage = () => {
               className="group relative rounded-lg overflow-hidden"
             >
               <img
-                src="https://images.pexels.com/photos/2113994/pexels-photo-2113994.jpeg?auto=compress&cs=tinysrgb&w=600"
-                alt="Person checking time on luxury watch"
+                src="https://images.pexels.com/photos/6069116/pexels-photo-6069116.jpeg?auto=compress&cs=tinysrgb&w=600"
+                alt="Women's modest clothing collection"
                 className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.src =
-                    "https://via.placeholder.com/600x400/e5e7eb/6b7280?text=Watch+Timing";
+                    "https://via.placeholder.com/600x400/e5e7eb/6b7280?text=Women's+Fashion";
                 }}
               />
               <div className="absolute inset-0 bg-black bg-opacity-40 group-hover:bg-opacity-30 transition-all duration-300">
@@ -1309,15 +1648,15 @@ export const HomePage = () => {
                     className="mb-2 font-bold text-xl"
                     style={{ fontFamily: "Playfair Display, serif" }}
                   >
-                    <Translate content="Perfect Timing" />
+                    <Translate content="Women's Collection" />
                   </h3>
                   <p className="opacity-90 text-sm">
-                    <Translate content="Precision meets style" />
+                    <Translate content="Dresses, tops & elegant wear" />
                   </p>
                 </div>
               </div>
             </motion.div>
-            {/* Watch Photo 3 - Amazing motion/detail */}
+            {/* Baby & Kids Clothing */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1325,13 +1664,13 @@ export const HomePage = () => {
               className="group relative rounded-lg overflow-hidden"
             >
               <img
-                src="https://images.pexels.com/photos/125779/pexels-photo-125779.jpeg?auto=compress&cs=tinysrgb&w=600"
-                alt="Luxury watch with amazing details"
+                src="https://images.pexels.com/photos/1648377/pexels-photo-1648377.jpeg?auto=compress&cs=tinysrgb&w=600"
+                alt="Baby and kids clothing collection"
                 className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.src =
-                    "https://via.placeholder.com/600x400/e5e7eb/6b7280?text=Watch+Masterpiece";
+                    "https://via.placeholder.com/600x400/e5e7eb/6b7280?text=Baby+Fashion";
                 }}
               />
               <div className="absolute inset-0 bg-black bg-opacity-40 group-hover:bg-opacity-30 transition-all duration-300">
@@ -1340,10 +1679,10 @@ export const HomePage = () => {
                     className="mb-2 font-bold text-xl"
                     style={{ fontFamily: "Playfair Display, serif" }}
                   >
-                    <Translate content="Masterpiece" />
+                    <Translate content="Baby & Kids" />
                   </h3>
                   <p className="opacity-90 text-sm">
-                    <Translate content="Crafted to perfection" />
+                    <Translate content="Adorable outfits for little ones" />
                   </p>
                 </div>
               </div>
@@ -1351,7 +1690,7 @@ export const HomePage = () => {
           </div>
         </div>
       </div>
-      {/* Watch Lifestyle Section */}
+      {/* Fashion Lifestyle Section */}
       <div className="bg-gradient-to-br from-gray-900 to-gray-800 py-16">
         <div className="mx-auto px-4 max-w-7xl">
           <div className="items-center gap-12 grid grid-cols-1 lg:grid-cols-2">
@@ -1364,13 +1703,13 @@ export const HomePage = () => {
                 className="mb-6 font-bold text-white text-3xl md:text-4xl"
                 style={{ fontFamily: "Playfair Display, serif" }}
               >
-                <Translate content="More Than Just Time" />
+                <Translate content="More Than Just Clothes" />
               </h2>
               <p
                 className="mb-8 text-gray-300 text-lg leading-relaxed"
                 style={{ fontFamily: "Inter, sans-serif" }}
               >
-                <Translate content="A luxury watch is not just an instrument for measuring time, but a statement of style, sophistication, and personal achievement. Each timepiece tells a story of craftsmanship and dedication." />
+                <Translate content="Fashion is not just about wearing clothes, but expressing yourself, your personality, and your unique style. Each piece tells a story of comfort, confidence, and personal taste." />
               </p>
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
@@ -1381,7 +1720,7 @@ export const HomePage = () => {
                     />
                   </div>
                   <span className="text-gray-300">
-                    <Translate content="Premium Swiss Movement" />
+                    <Translate content="Premium Quality Fabrics" />
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
@@ -1392,7 +1731,7 @@ export const HomePage = () => {
                     />
                   </div>
                   <span className="text-gray-300">
-                    <Translate content="Sapphire Crystal Glass" />
+                    <Translate content="Comfortable & Durable" />
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
@@ -1403,7 +1742,7 @@ export const HomePage = () => {
                     />
                   </div>
                   <span className="text-gray-300">
-                    <Translate content="Water Resistant to 100m" />
+                    <Translate content="Latest Fashion Trends" />
                   </span>
                 </div>
               </div>
@@ -1415,23 +1754,23 @@ export const HomePage = () => {
               className="relative"
             >
               <img
-                src="https://images.pexels.com/photos/2113994/pexels-photo-2113994.jpeg?auto=compress&cs=tinysrgb&w=800"
-                alt="Person wearing luxury watch"
+                src="https://images.pexels.com/photos/3755625/pexels-photo-3755625.jpeg?auto=compress&cs=tinysrgb&w=800"
+                alt="Person wearing modest fashion outfit"
                 className="shadow-2xl rounded-lg w-full h-96 object-cover"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.src =
-                    "https://via.placeholder.com/800x600/e5e7eb/6b7280?text=Luxury+Watch+Lifestyle";
+                    "https://via.placeholder.com/800x600/e5e7eb/6b7280?text=Fashion+Lifestyle";
                 }}
               />
               <div className="top-4 right-4 absolute bg-white bg-opacity-90 p-4 rounded-lg">
                 <div className="flex items-center gap-2">
                   <Icon
-                    icon={allIcons.solid.faClock}
+                    icon={allIcons.solid.faTshirt}
                     iconClassName="text-blue-500"
                   />
                   <span className="font-semibold text-gray-900 text-sm">
-                    <Translate content="Swiss Made" />
+                    <Translate content="Premium Fashion" />
                   </span>
                 </div>
               </div>
@@ -1439,7 +1778,7 @@ export const HomePage = () => {
           </div>
         </div>
       </div>
-      {/* Watch Gallery Section */}
+      {/* Fashion Gallery Section */}
       <div className="bg-gray-50 py-16">
         <div className="mx-auto px-4 max-w-7xl">
           <div className="mb-12 text-center">
@@ -1447,13 +1786,13 @@ export const HomePage = () => {
               className="mb-4 font-bold text-gray-900 text-3xl md:text-4xl"
               style={{ fontFamily: "Playfair Display, serif" }}
             >
-              <Translate content="Timepiece Gallery" />
+              <Translate content="Fashion Gallery" />
             </h2>
             <p
               className="mx-auto max-w-2xl text-gray-600 text-lg"
               style={{ fontFamily: "Inter, sans-serif" }}
             >
-              <Translate content="Explore our curated selection of exceptional timepieces from around the world" />
+              <Translate content="Explore our curated selection of fashion pieces for men, women, and babies" />
             </p>
           </div>
           <div className="gap-6 grid grid-cols-2 md:grid-cols-4">
@@ -1464,19 +1803,19 @@ export const HomePage = () => {
               className="group relative shadow-lg rounded-lg overflow-hidden"
             >
               <img
-                src="https://images.pexels.com/photos/277390/pexels-photo-277390.jpeg?auto=compress&cs=tinysrgb&w=400"
-                alt="Classic watch collection"
+                src="https://images.pexels.com/photos/2897883/pexels-photo-2897883.jpeg?auto=compress&cs=tinysrgb&w=400"
+                alt="Men's casual clothing collection"
                 className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.src =
-                    "https://via.placeholder.com/400x300/e5e7eb/6b7280?text=Classic+Series";
+                    "https://via.placeholder.com/400x300/e5e7eb/6b7280?text=Men's+T-Shirts";
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <div className="bottom-4 left-4 absolute text-white">
                   <p className="font-semibold text-sm">
-                    <Translate content="Classic Series" />
+                    <Translate content="Men's T-Shirts" />
                   </p>
                 </div>
               </div>
@@ -1488,19 +1827,19 @@ export const HomePage = () => {
               className="group relative shadow-lg rounded-lg overflow-hidden"
             >
               <img
-                src="https://images.pexels.com/photos/190819/pexels-photo-190819.jpeg?auto=compress&cs=tinysrgb&w=400"
-                alt="Sports watch on wrist"
+                src="https://images.pexels.com/photos/1566412/pexels-photo-1566412.jpeg?auto=compress&cs=tinysrgb&w=400"
+                alt="Men's jeans and denim collection"
                 className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.src =
-                    "https://via.placeholder.com/400x300/e5e7eb/6b7280?text=Sport+Collection";
+                    "https://via.placeholder.com/400x300/e5e7eb/6b7280?text=Men's+Jeans";
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <div className="bottom-4 left-4 absolute text-white">
                   <p className="font-semibold text-sm">
-                    <Translate content="Sport Collection" />
+                    <Translate content="Men's Jeans" />
                   </p>
                 </div>
               </div>
@@ -1512,19 +1851,19 @@ export const HomePage = () => {
               className="group relative shadow-lg rounded-lg overflow-hidden"
             >
               <img
-                src="https://images.pexels.com/photos/2113994/pexels-photo-2113994.jpeg?auto=compress&cs=tinysrgb&w=400"
-                alt="Luxury timepiece detail"
+                src="https://images.pexels.com/photos/6069116/pexels-photo-6069116.jpeg?auto=compress&cs=tinysrgb&w=400"
+                alt="Women's modest fashion collection"
                 className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.src =
-                    "https://via.placeholder.com/400x300/e5e7eb/6b7280?text=Luxury+Series";
+                    "https://via.placeholder.com/400x300/e5e7eb/6b7280?text=Women's+Dresses";
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <div className="bottom-4 left-4 absolute text-white">
                   <p className="font-semibold text-sm">
-                    <Translate content="Luxury Series" />
+                    <Translate content="Women's Dresses" />
                   </p>
                 </div>
               </div>
@@ -1536,19 +1875,19 @@ export const HomePage = () => {
               className="group relative shadow-lg rounded-lg overflow-hidden"
             >
               <img
-                src="https://images.pexels.com/photos/125779/pexels-photo-125779.jpeg?auto=compress&cs=tinysrgb&w=400"
-                alt="Watch mechanism close-up"
+                src="https://images.pexels.com/photos/1648377/pexels-photo-1648377.jpeg?auto=compress&cs=tinysrgb&w=400"
+                alt="Baby clothes and outfits"
                 className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.src =
-                    "https://via.placeholder.com/400x300/e5e7eb/6b7280?text=Mechanical";
+                    "https://via.placeholder.com/400x300/e5e7eb/6b7280?text=Baby+Clothes";
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <div className="bottom-4 left-4 absolute text-white">
                   <p className="font-semibold text-sm">
-                    <Translate content="Mechanical" />
+                    <Translate content="Baby Clothes" />
                   </p>
                 </div>
               </div>
@@ -1563,22 +1902,22 @@ export const HomePage = () => {
               className="group relative shadow-lg rounded-lg overflow-hidden"
             >
               <img
-                src="https://images.pexels.com/photos/1697214/pexels-photo-1697214.jpeg?auto=compress&cs=tinysrgb&w=600"
-                alt="Person checking premium watch"
+                src="https://images.pexels.com/photos/6347888/pexels-photo-6347888.jpeg?auto=compress&cs=tinysrgb&w=600"
+                alt="Professional men's clothing"
                 className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.src =
-                    "https://via.placeholder.com/600x400/e5e7eb/6b7280?text=Executive+Choice";
+                    "https://via.placeholder.com/600x400/e5e7eb/6b7280?text=Men's+Business";
                 }}
               />
               <div className="absolute inset-0 bg-black bg-opacity-40 group-hover:bg-opacity-30 transition-all duration-300">
                 <div className="bottom-6 left-6 absolute text-white">
                   <h3 className="mb-2 font-bold text-xl">
-                    <Translate content="Executive Choice" />
+                    <Translate content="Men's Business" />
                   </h3>
                   <p className="opacity-90 text-sm">
-                    <Translate content="Perfect for business professionals" />
+                    <Translate content="Professional attire for success" />
                   </p>
                 </div>
               </div>
@@ -1590,22 +1929,22 @@ export const HomePage = () => {
               className="group relative shadow-lg rounded-lg overflow-hidden"
             >
               <img
-                src="https://images.pexels.com/photos/277390/pexels-photo-277390.jpeg?auto=compress&cs=tinysrgb&w=600"
-                alt="Vintage watch with amazing motion"
+                src="https://images.pexels.com/photos/5710082/pexels-photo-5710082.jpeg?auto=compress&cs=tinysrgb&w=600"
+                alt="Women's modest casual fashion"
                 className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.src =
-                    "https://via.placeholder.com/600x400/e5e7eb/6b7280?text=Vintage+Heritage";
+                    "https://via.placeholder.com/600x400/e5e7eb/6b7280?text=Women's+Casual";
                 }}
               />
               <div className="absolute inset-0 bg-black bg-opacity-40 group-hover:bg-opacity-30 transition-all duration-300">
                 <div className="bottom-6 left-6 absolute text-white">
                   <h3 className="mb-2 font-bold text-xl">
-                    <Translate content="Vintage Heritage" />
+                    <Translate content="Women's Casual" />
                   </h3>
                   <p className="opacity-90 text-sm">
-                    <Translate content="Timeless classics with history" />
+                    <Translate content="Comfort meets style everyday" />
                   </p>
                 </div>
               </div>
@@ -1617,22 +1956,22 @@ export const HomePage = () => {
               className="group relative shadow-lg rounded-lg overflow-hidden"
             >
               <img
-                src="https://images.pexels.com/photos/190819/pexels-photo-190819.jpeg?auto=compress&cs=tinysrgb&w=600"
-                alt="Modern watch lifestyle"
+                src="https://images.pexels.com/photos/1620760/pexels-photo-1620760.jpeg?auto=compress&cs=tinysrgb&w=600"
+                alt="Kids and children fashion wear"
                 className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.src =
-                    "https://via.placeholder.com/600x400/e5e7eb/6b7280?text=Modern+Innovation";
+                    "https://via.placeholder.com/600x400/e5e7eb/6b7280?text=Kids+Fashion";
                 }}
               />
               <div className="absolute inset-0 bg-black bg-opacity-40 group-hover:bg-opacity-30 transition-all duration-300">
                 <div className="bottom-6 left-6 absolute text-white">
                   <h3 className="mb-2 font-bold text-xl">
-                    <Translate content="Modern Innovation" />
+                    <Translate content="Kids Fashion" />
                   </h3>
                   <p className="opacity-90 text-sm">
-                    <Translate content="Cutting-edge technology meets style" />
+                    <Translate content="Fun and stylish clothes for kids" />
                   </p>
                 </div>
               </div>
@@ -1750,6 +2089,112 @@ export const HomePage = () => {
               </div>
             </motion.div>
           </div>
+          {/* Customer Review Form Section */}
+          <div className="mt-16 text-center">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4 }}
+              className="bg-white shadow-xl mx-auto p-8 border border-gray-200 rounded-2xl max-w-2xl"
+            >
+              <div className="mb-6 text-center">
+                <h3
+                  className="mb-2 font-bold text-gray-900 text-2xl"
+                  style={{ fontFamily: "Playfair Display, serif" }}
+                >
+                  <Translate content="Share Your Experience" />
+                </h3>
+                <p
+                  className="text-gray-600"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
+                  <Translate content="Help other customers by sharing your feedback" />
+                </p>
+              </div>
+              {/* Star Rating */}
+              <div className="mb-6">
+                <label
+                  className="block mb-3 font-semibold text-gray-700 text-sm"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
+                  <Translate content="Rating" />
+                </label>
+                <div className="flex justify-center gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      onClick={() => setReviewRating(star)}
+                      className="hover:scale-110 transition-transform duration-200"
+                    >
+                      <Icon
+                        icon={allIcons.solid.faStar}
+                        iconClassName={tw(
+                          "text-2xl transition-colors duration-200",
+                          star <= reviewRating
+                            ? "text-yellow-400 hover:text-yellow-500"
+                            : "text-gray-300 hover:text-yellow-300"
+                        )}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Review Message */}
+              <div className="mb-6">
+                <label
+                  className="block mb-2 font-semibold text-gray-700 text-sm"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
+                  <Translate content="Your Review" />
+                </label>
+                <textarea
+                  value={reviewMessage}
+                  onChange={(e) => setReviewMessage(e.target.value)}
+                  placeholder="Share your shopping experience with us..."
+                  rows={4}
+                  className="px-4 py-3 border border-gray-300 focus:border-blue-500 border-solid rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 w-full text-gray-900 transition-colors resize-none"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                />
+              </div>
+              {/* Action Buttons */}
+              <div className="flex md:flex-row flex-col justify-center gap-4">
+                <button
+                  onClick={() => {
+                    setReviewMessage("");
+                    setReviewRating(5);
+                  }}
+                  className="bg-gray-200 hover:bg-gray-300 px-6 py-3 rounded-lg font-medium text-gray-700 transition-colors"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
+                  <Translate content="Clear Form" />
+                </button>
+                <button
+                  onClick={handleReviewSubmit}
+                  disabled={isSubmittingReview || !reviewMessage.trim()}
+                  className="bg-gradient-to-r from-blue-500 hover:from-blue-600 to-purple-600 hover:to-purple-700 disabled:opacity-50 shadow-lg hover:shadow-xl px-6 py-3 rounded-lg font-medium text-white hover:scale-105 transition-all duration-300 disabled:cursor-not-allowed transform"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
+                  {isSubmittingReview ? (
+                    <>
+                      <Icon
+                        icon={allIcons.solid.faSpinner}
+                        iconClassName="mr-2 animate-spin"
+                      />
+                      <Translate content="Submitting..." />
+                    </>
+                  ) : (
+                    <>
+                      <Icon
+                        icon={allIcons.solid.faPaperPlane}
+                        iconClassName="mr-2"
+                      />
+                      <Translate content="Submit Review" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </div>
       {/* Statistics Section */}
@@ -1782,6 +2227,185 @@ export const HomePage = () => {
               <div className="text-blue-100">
                 <Translate content="Brands" />
               </div>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+      {/* Commerce Sign Section - Added at top of footer */}
+      <div className="relative bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600 py-16 overflow-hidden">
+        {/* Background decorative elements */}
+        <div className="absolute inset-0 opacity-20">
+          <div className="top-10 left-10 absolute bg-white blur-xl rounded-full w-20 h-20"></div>
+          <div className="top-32 right-20 absolute bg-white blur-lg rounded-full w-16 h-16"></div>
+          <div className="bottom-20 left-32 absolute bg-white blur-lg rounded-full w-12 h-12"></div>
+          <div className="right-16 bottom-32 absolute bg-white blur-xl rounded-full w-24 h-24"></div>
+        </div>
+        <div className="z-10 relative mx-auto px-4 max-w-7xl">
+          <div className="text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              {/* Icon with animated background */}
+              <div className="flex justify-center mb-6">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-white/30 blur-lg rounded-full animate-pulse"></div>
+                  <div className="relative flex justify-center items-center bg-white/20 backdrop-blur-sm border border-white/30 rounded-full w-20 h-20">
+                    <Icon
+                      icon={allIcons.solid.faStore}
+                      iconClassName="text-3xl text-white"
+                    />
+                  </div>
+                </div>
+              </div>
+              <h2
+                className="mb-6 font-bold text-white text-4xl md:text-5xl leading-tight"
+                style={{ fontFamily: "Playfair Display, serif" }}
+              >
+                <Translate content="Join Our Commerce" />
+                <br />
+                <span className="bg-clip-text bg-gradient-to-r from-white to-sky-100 text-transparent">
+                  <Translate content="Network" />
+                </span>
+              </h2>
+              <p
+                className="mx-auto mb-10 max-w-3xl text-sky-50 text-xl leading-relaxed"
+                style={{ fontFamily: "Inter, sans-serif" }}
+              >
+                <Translate content="Are you a business owner? Join thousands of merchants who trust our platform to grow their sales and reach new customers worldwide." />
+              </p>
+              {/* Enhanced feature cards */}
+              <div className="flex md:flex-row flex-col justify-center items-center gap-8 mb-12">
+                <motion.div
+                  initial={{ opacity: 0, x: -30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                  className="group flex items-center gap-4 bg-white/15 hover:bg-white/25 backdrop-blur-sm px-6 py-4 border border-white/20 rounded-2xl text-white transition-all duration-300 cursor-pointer"
+                >
+                  <div className="flex justify-center items-center bg-white/20 group-hover:bg-white/30 rounded-xl w-14 h-14 transition-all duration-300">
+                    <Icon
+                      icon={allIcons.solid.faRocket}
+                      iconClassName="text-xl group-hover:scale-110 transition-transform duration-300"
+                    />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-bold text-lg">
+                      <Translate content="Easy Setup" />
+                    </h3>
+                    <p className="text-sky-100 text-sm">
+                      <Translate content="Get started in minutes" />
+                    </p>
+                  </div>
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: -30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.3 }}
+                  className="group flex items-center gap-4 bg-white/15 hover:bg-white/25 backdrop-blur-sm px-6 py-4 border border-white/20 rounded-2xl text-white transition-all duration-300 cursor-pointer"
+                >
+                  <div className="flex justify-center items-center bg-white/20 group-hover:bg-white/30 rounded-xl w-14 h-14 transition-all duration-300">
+                    <Icon
+                      icon={allIcons.solid.faChartLine}
+                      iconClassName="text-xl group-hover:scale-110 transition-transform duration-300"
+                    />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-bold text-lg">
+                      <Translate content="Grow Sales" />
+                    </h3>
+                    <p className="text-sky-100 text-sm">
+                      <Translate content="Reach more customers" />
+                    </p>
+                  </div>
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, x: 30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.6, delay: 0.4 }}
+                  className="group flex items-center gap-4 bg-white/15 hover:bg-white/25 backdrop-blur-sm px-6 py-4 border border-white/20 rounded-2xl text-white transition-all duration-300 cursor-pointer"
+                >
+                  <div className="flex justify-center items-center bg-white/20 group-hover:bg-white/30 rounded-xl w-14 h-14 transition-all duration-300">
+                    <Icon
+                      icon={allIcons.solid.faHeadset}
+                      iconClassName="text-xl group-hover:scale-110 transition-transform duration-300"
+                    />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-bold text-lg">
+                      <Translate content="24/7 Support" />
+                    </h3>
+                    <p className="text-sky-100 text-sm">
+                      <Translate content="We're here to help" />
+                    </p>
+                  </div>
+                </motion.div>
+              </div>
+              {/* Enhanced action buttons */}
+              <div className="flex md:flex-row flex-col justify-center items-center gap-6">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.6, delay: 0.5 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Button
+                    className="bg-white hover:bg-gray-50 shadow-xl hover:shadow-2xl px-10 py-5 rounded-2xl font-bold text-sky-600 text-lg transition-all hover:-translate-y-1 duration-300 transform"
+                    onClick={() => history.push("/client-signin")}
+                  >
+                    <Icon
+                      icon={allIcons.solid.faRocket}
+                      iconClassName="mr-3 text-xl"
+                    />
+                    <Translate content="Start Selling Today" />
+                  </Button>
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.6, delay: 0.6 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Button
+                    className="bg-transparent hover:bg-white/10 backdrop-blur-sm px-10 py-5 border-2 border-white hover:border-white/80 rounded-2xl font-bold text-white text-lg transition-all duration-300"
+                    onClick={() => {
+                      // Add logic to show more info about merchant benefits
+                      window.open("mailto:merchant@ourstore.com", "_blank");
+                    }}
+                  >
+                    <Icon
+                      icon={allIcons.solid.faEnvelope}
+                      iconClassName="mr-3 text-xl"
+                    />
+                    <Translate content="Contact Sales Team" />
+                  </Button>
+                </motion.div>
+              </div>
+              {/* Trust indicators */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.7 }}
+                className="flex flex-wrap justify-center items-center gap-8 mt-12 text-sky-100"
+              >
+                <div className="flex items-center gap-2">
+                  <Icon icon={allIcons.solid.faUsers} iconClassName="text-lg" />
+                  <span className="font-semibold">1000+ Merchants</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Icon icon={allIcons.solid.faGlobe} iconClassName="text-lg" />
+                  <span className="font-semibold">50+ Countries</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Icon
+                    icon={allIcons.solid.faStar}
+                    iconClassName="text-lg text-yellow-300"
+                  />
+                  <span className="font-semibold">4.9/5 Rating</span>
+                </div>
+              </motion.div>
             </motion.div>
           </div>
         </div>

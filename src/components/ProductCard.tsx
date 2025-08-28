@@ -3,9 +3,12 @@ import { EmptyComponent, Icon, Translate } from "@biqpod/app/ui/components";
 import { tw } from "@biqpod/app/ui/utils";
 import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useHistory } from "react-router-dom";
 import {
   useFullCart,
   addToCart,
+  addPackToCart,
+  useIsPackInCart,
   useIsFavorite,
   toggleFavorite,
   useIsSignedIn,
@@ -18,36 +21,56 @@ import {
   COMMON_STYLES,
   MONTSERRAT_FONT,
   BRAND_COLOR,
+  useArabic,
 } from "./utils";
 import { useAsyncMemo } from "@biqpod/app/ui/hooks";
-import { api } from "../api";
-
+import { api, initPixels } from "../api";
 // Product Card Component with Auto-Sliding Photos
-export const ProductCard = ({ product }: { product: SnapBuy.Product }) => {
+export const ProductCard = ({
+  product,
+  pack,
+}: {
+  product: SnapBuy.Product;
+  pack?: {
+    packData: SnapBuy.Pack;
+    productInPack: { prodId: string; count: number };
+  };
+}) => {
+  const history = useHistory();
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [imageError, setImageError] = useState<{ [key: number]: boolean }>({});
   const [favoriteClicked, setFavoriteClicked] = useState(false);
   const [cartClicked, setCartClicked] = useState(false);
   const isFavorite = useIsFavorite(product.id!);
   const isSignedIn = useIsSignedIn();
-
   // Memoized values for performance
   const photos = useMemo(() => product.photos || [], [product.photos]);
   const hasMultiplePhotos = useMemo(() => photos.length > 1, [photos.length]);
-
-  // Get pricing based on authentication state
+  // Get pricing based on authentication state and pack context
   const priceDisplay = useMemo(() => {
-    if (isSignedIn) {
+    if (pack) {
+      // When in pack context, show pack pricing logic
+      return {
+        single: `${pack.packData.price} DA / ${
+          pack.packData.products?.reduce((sum, p) => sum + p.count, 0) || 1
+        } items`,
+        isPackPrice: true,
+      };
+    } else if (isSignedIn) {
       return getProductPricesForCustomer(product);
     } else {
       return { single: getProductPriceDisplay(product) };
     }
-  }, [product, isSignedIn]);
-
-  // Get current cart count for this product
-  const currentCartCount =
-    useFullCart().find((item) => item.prodId === product.id)?.count || 0;
-
+  }, [product, isSignedIn, pack]);
+  // Get current cart count for this product or pack
+  const fullCart = useFullCart();
+  const currentCartCount = pack
+    ? 0 // For packs, we'll use a different status check
+    : fullCart.find((item) => item.prodId === product.id)?.count || 0;
+  // Check if pack is in cart - use safe default to avoid conditional hook calls
+  const safePackData = pack?.packData || { id: "", products: [] };
+  const rawPackInCart = useIsPackInCart(safePackData);
+  const isPackInCart = pack ? rawPackInCart : false;
   // Fetch brand and store for label
   const brand = useAsyncMemo(async () => {
     if (product.brandId) {
@@ -55,38 +78,46 @@ export const ProductCard = ({ product }: { product: SnapBuy.Product }) => {
     }
     return null;
   }, [product.brandId]);
-
   const store = useAsyncMemo(async () => {
     return await api.getStore();
   }, []);
-
   const brandLabel = brand?.name || store?.name || "";
-
+  // Handle card click to navigate to product page
+  const handleCardClick = () => {
+    if (product.id) {
+      history.push(`/product/${product.id}`);
+    }
+  };
+  const pixels = initPixels(store);
+  useMemo(async () => {
+    await pixels?.view(product);
+  }, [pixels]);
   // Handle image error
   const handleImageError = (index: number) => {
     setImageError((prev) => ({ ...prev, [index]: true }));
   };
-
-  // Handle add to cart with animation
+  // Handle add to cart with animation - different behavior for packs
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click event
-    if (product.id) {
-      setCartClicked(true);
+    setCartClicked(true);
+    if (pack && pack.packData.id) {
+      // For pack items, add the pack as a unit to cart
+      addPackToCart(pack.packData, 1);
+    } else if (product.id) {
+      // Regular product behavior
       addToCart(product.id, currentCartCount + 1);
-      setTimeout(() => setCartClicked(false), 600);
     }
-  };
-
-  // Handle favorite toggle with animation
+    setTimeout(() => setCartClicked(false), 600);
+  }; // Handle favorite toggle with animation
   const handleToggleFavorite = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click event
     if (product.id) {
       setFavoriteClicked(true);
+      !isFavorite && pixels?.favorite(product);
       toggleFavorite(product.id);
       setTimeout(() => setFavoriteClicked(false), 600);
     }
   };
-
   // Auto-slide photos every 3 seconds
   useEffect(() => {
     if (!hasMultiplePhotos) return;
@@ -97,11 +128,13 @@ export const ProductCard = ({ product }: { product: SnapBuy.Product }) => {
     }, 3000);
     return () => clearInterval(interval);
   }, [photos.length, hasMultiplePhotos]);
+  const isArabic = useArabic();
   return (
     <motion.div
-      className="bg-gray-100 hover:shadow-lg border border-gray-300 border-solid w-[300px] overflow-hidden transition-all duration-300 cursor-pointer"
-      whileHover={{ y: -5, transition: { duration: 0.2 } }}
-      whileTap={{ scale: 0.98 }}
+      className="group bg-gray-100 hover:shadow-xl border border-gray-300 hover:border-blue-300 border-solid w-[300px] h-full overflow-hidden transition-all duration-300 cursor-pointer"
+      whileHover={{ y: -8, scale: 1.02, transition: { duration: 0.3 } }}
+      whileTap={{ scale: 0.97 }}
+      onClick={handleCardClick}
     >
       <div className="relative">
         {photos.length > 0 ? (
@@ -111,8 +144,10 @@ export const ProductCard = ({ product }: { product: SnapBuy.Product }) => {
               className="flex h-full transition-transform duration-500 ease-in-out"
               style={{
                 width: `${photos.length * 100}%`,
-                transform: `translateX(-${
-                  currentPhotoIndex * (100 / photos.length)
+                transform: `translateX(${
+                  (isArabic ? 1 : -1) *
+                  currentPhotoIndex *
+                  (100 / photos.length)
                 }%)`,
               }}
             >
@@ -157,6 +192,20 @@ export const ProductCard = ({ product }: { product: SnapBuy.Product }) => {
             <Icon icon={icons.image} iconClassName="text-4xl text-gray-400" />
           </div>
         )}
+        {/* Pack Badge */}
+        {pack && (
+          <motion.div
+            className={`absolute bg-blue-500 px-3 py-1 rounded-full font-bold text-white text-xs ${
+              product.limited ? "top-12 left-2" : "top-2 left-2"
+            }`}
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+          >
+            <Icon icon={allIcons.solid.faBox} iconClassName="text-white mr-1" />
+            Pack: {pack.productInPack.count}x
+          </motion.div>
+        )}
         {/* Limited Badge */}
         {product.limited && (
           <motion.div
@@ -168,9 +217,9 @@ export const ProductCard = ({ product }: { product: SnapBuy.Product }) => {
             <Translate content="Limited" />
           </motion.div>
         )}
-
         {/* Discount Badge for signed-in customers */}
         {isSignedIn &&
+          !pack && // Don't show discount badge for pack items
           (() => {
             const prices = getProductPricesForCustomer(product);
             return prices.hasDiscount && prices.discountPercentage >= 10 ? (
@@ -233,7 +282,7 @@ export const ProductCard = ({ product }: { product: SnapBuy.Product }) => {
           {/* Heart particles effect */}
           <AnimatePresence>
             {favoriteClicked && isFavorite && (
-              <>
+              <EmptyComponent>
                 {[...Array(6)].map((_, i) => (
                   <motion.div
                     key={i}
@@ -248,7 +297,7 @@ export const ProductCard = ({ product }: { product: SnapBuy.Product }) => {
                     transition={{ duration: 0.6, delay: i * 0.1 }}
                   />
                 ))}
-              </>
+              </EmptyComponent>
             )}
           </AnimatePresence>
         </motion.button>
@@ -269,11 +318,36 @@ export const ProductCard = ({ product }: { product: SnapBuy.Product }) => {
           className="mb-2 font-semibold text-gray-800 text-lg line-clamp-2"
           style={COMMON_STYLES.interFont}
         >
-          {product.name}
+          {product.name || (
+            <span className="text-gray-300 italic uppercase">
+              <Translate content="untitled" />
+            </span>
+          )}
         </h3>
         <div className="flex justify-between items-center">
           <div className="flex flex-col">
-            {isSignedIn && "customerPriceDisplay" in priceDisplay ? (
+            {pack ? (
+              // Pack pricing display
+              <div className="flex flex-col">
+                <span
+                  className="font-bold text-blue-600 text-lg"
+                  style={{ fontFamily: MONTSERRAT_FONT }}
+                >
+                  Pack: {pack.packData.price} DA
+                </span>
+                <span className="text-gray-500 text-sm">
+                  {pack.productInPack.count}x of this product
+                </span>
+                <span className="mt-1 font-medium text-blue-500 text-xs">
+                  Total:{" "}
+                  {pack.packData.products?.reduce(
+                    (sum, p) => sum + p.count,
+                    0
+                  ) || 1}{" "}
+                  items in pack
+                </span>
+              </div>
+            ) : isSignedIn && "customerPriceDisplay" in priceDisplay ? (
               // Show both customer and client prices when signed in
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
@@ -353,7 +427,28 @@ export const ProductCard = ({ product }: { product: SnapBuy.Product }) => {
                     : {}
                 }
               >
-                {currentCartCount > 0 ? (
+                {pack ? (
+                  // Pack button
+                  <EmptyComponent>
+                    {isPackInCart ? (
+                      <EmptyComponent>
+                        <Icon
+                          icon={allIcons.solid.faCheck}
+                          iconClassName="text-xs mr-1"
+                        />
+                        <Translate content="Pack Added" />
+                      </EmptyComponent>
+                    ) : (
+                      <EmptyComponent>
+                        <Icon
+                          icon={allIcons.solid.faBox}
+                          iconClassName="text-xs mr-1"
+                        />
+                        <Translate content="Add Pack to Cart" />
+                      </EmptyComponent>
+                    )}
+                  </EmptyComponent>
+                ) : currentCartCount > 0 ? (
                   <EmptyComponent>
                     <motion.div
                       animate={

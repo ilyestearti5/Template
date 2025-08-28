@@ -51,12 +51,14 @@ export const CollectionPage = () => {
       {/* Collection Header */}
       <div className="mx-auto px-4 py-8 max-w-7xl">
         <div className="flex items-center gap-6 mb-8">
-          <div className="rounded-full w-24 h-24 overflow-hidden">
-            <img
-              src={selectedCollection?.photo}
-              alt={selectedCollection?.name}
-              className="w-full h-full object-cover"
-            />
+          <div>
+            <div className="rounded-full w-24 h-24 overflow-hidden">
+              <img
+                src={selectedCollection?.photo}
+                alt={selectedCollection?.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
           </div>
           <div>
             <h1 className="mb-2 font-bold text-gray-900 text-4xl">
@@ -99,7 +101,7 @@ export const CollectionPage = () => {
           </div>
         ) : (
           /* Products Grid */
-          <div className="gap-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="flex max-md:flex-col flex-wrap md:justify-center max-md:items-center md:items-stretch gap-2">
             {collectionProducts.map((product, index) => (
               <motion.div
                 key={product.id}

@@ -9,7 +9,7 @@ import {
   useAction,
   useEffectDelay,
 } from "@biqpod/app/ui/hooks";
-import { api, Customer } from "../api";
+import { api, Customer, initPixels, useStore } from "../api";
 import { allIcons } from "@biqpod/app/ui/apis";
 import { tw } from "@biqpod/app/ui/utils";
 import { Breadcrumb } from "./Breadcrumb";
@@ -29,6 +29,8 @@ export const ClientSignIn = () => {
   const [deletePassword, setDeletePassword] = useState("");
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const store = useStore();
+  const pixels = initPixels(store);
   const signupAction = useAction(
     "signup-account",
     async () => {
@@ -82,9 +84,19 @@ export const ClientSignIn = () => {
         phone,
         email,
       });
+      pixels?.signInAccount(username);
       reset();
     },
-    [username, password, confirmPassword, firstname, lastname, phone, email]
+    [
+      username,
+      password,
+      confirmPassword,
+      firstname,
+      pixels,
+      lastname,
+      phone,
+      email,
+    ]
   );
   const loginAction = useAction(
     "login-account",

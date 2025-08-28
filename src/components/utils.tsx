@@ -1,4 +1,5 @@
 import { allIcons } from "@biqpod/app/ui/apis";
+import { useSettingValue } from "@biqpod/app/ui/hooks";
 
 // Icon symbols using allIcons
 export const icons = {
@@ -21,15 +22,24 @@ export const icons = {
 // Optimized utility functions for repeated logic
 export const getProductPrice = (
   product: SnapBuy.Product,
-  isGros = false
-): number => {
+  isGros = false,
+  count = 1
+) => {
   return product.type === "single"
     ? (isGros ? product.single?.customer : product.single?.client) || 0
-    : Math.min(...(product.multiple?.prices?.map((p) => p.price) || [0]));
+    : product.multiple?.prices
+        ?.sort((a, b) => {
+          return a.quantity - b.quantity;
+        })
+        ?.find((a) => a.quantity >= count)?.price || 0;
 };
 
-export const getProductPriceDisplay = (product: SnapBuy.Product): string => {
-  const price = getProductPrice(product);
+export const getProductPriceDisplay = (
+  product: SnapBuy.Product,
+  isGros = false,
+  count = 1
+): string => {
+  const price = getProductPrice(product, isGros, count);
   return product.type === "single" ? `${price} DA` : `From ${price} DA`;
 };
 
@@ -211,3 +221,8 @@ export const COMMON_STYLES = {
     backgroundColor: BRAND_COLOR_LIGHT,
   },
 };
+
+export function useArabic() {
+  const lang = useSettingValue("window/lang.enum");
+  return lang === "ar";
+}

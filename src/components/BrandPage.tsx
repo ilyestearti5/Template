@@ -8,26 +8,20 @@ import { api } from "../api";
 import { Breadcrumb } from "./Breadcrumb";
 import { ProductCard } from "./ProductCard";
 import { COMMON_STYLES, MONTSERRAT_FONT } from "./utils";
-
 export const BrandPage = () => {
   const { brandId } = useParams<{ brandId: string }>();
-
   const brand = useAsyncMemo(async () => {
     if (!brandId) return null;
     return await api.getBrand(brandId);
   }, [brandId]);
-
   const products = useAsyncMemo(async () => {
     const all = await api.getProducts();
     return all?.filter((p) => p.brandId === brandId) || [];
   }, [brandId]);
-
   const productCount = products?.length || 0;
-
   const headerPhoto = useMemo(() => {
     return brand?.photo || undefined;
   }, [brand]);
-
   return (
     <div className="bg-white min-h-screen">
       {/* Breadcrumb */}
@@ -38,7 +32,6 @@ export const BrandPage = () => {
           { label: brand?.name || "..." },
         ]}
       />
-
       {/* Header */}
       <div className="relative">
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-gray-200 border-b">
@@ -92,7 +85,6 @@ export const BrandPage = () => {
           </div>
         </div>
       </div>
-
       {/* Products Grid */}
       <div className="mx-auto px-4 py-8 max-w-7xl">
         {productCount === 0 ? (
@@ -113,7 +105,7 @@ export const BrandPage = () => {
             </div>
           </div>
         ) : (
-          <div className="gap-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          <div className="flex max-md:flex-col flex-wrap max-md:items-center md:items-stretch gap-2">
             <EmptyComponent>
               {products!.map((product) => (
                 <motion.div

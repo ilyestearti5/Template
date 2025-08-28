@@ -9,11 +9,19 @@ import { Button } from "./Custom";
 import { ProductCard } from "./ProductCard";
 import { BRAND_COLOR, icons } from "./utils";
 import { Breadcrumb } from "./Breadcrumb";
+import { addPackToCart, useIsPackInCart } from "../hooks";
 
 export const OfferPage = () => {
   const { offerId } = useParams<{ offerId: string }>();
   const history = useHistory();
   const [selectedOffer, setSelectedOffer] = useState<SnapBuy.Pack | null>(null);
+  const [packAddClicked, setPackAddClicked] = useState(false);
+
+  // Check if the entire pack is already in cart
+  // We need to provide a safe default pack to avoid conditional hook calls
+  const safePack = selectedOffer || { id: "", products: [] };
+  const isEntirePackInCart =
+    useIsPackInCart(safePack) && selectedOffer !== null;
   // Fetch offers/packs for this store
   const offers = useAsyncMemo(async () => {
     return api.getPacks();
@@ -118,11 +126,17 @@ export const OfferPage = () => {
                   transition={{ duration: 0.3, delay: index * 0.05 }}
                 >
                   <div className="relative w-fit">
-                    <ProductCard product={product} />
-                    {/* Offer Badge */}
-                    <div className="top-10 left-2 absolute bg-red-500 px-2 py-1 rounded-full font-bold text-white text-xs">
-                      Pack: {offerProduct?.count}x
-                    </div>
+                    <ProductCard
+                      product={product}
+                      pack={
+                        selectedOffer && offerProduct
+                          ? {
+                              packData: selectedOffer,
+                              productInPack: offerProduct,
+                            }
+                          : undefined
+                      }
+                    />
                   </div>
                 </motion.div>
               );
@@ -172,6 +186,64 @@ export const OfferPage = () => {
                   <Translate content="special price" />
                 </div>
               </div>
+            </div>
+
+            {/* Add Entire Pack Button */}
+            <div className="flex justify-center mt-6">
+              <motion.div
+                animate={
+                  packAddClicked
+                    ? {
+                        scale: [1, 1.1, 1],
+                        transition: { duration: 0.3 },
+                      }
+                    : {}
+                }
+              >
+                <Button
+                  onClick={() => {
+                    if (selectedOffer && selectedOffer.id) {
+                      setPackAddClicked(true);
+                      addPackToCart(selectedOffer, 1);
+                      setTimeout(() => setPackAddClicked(false), 600);
+                    }
+                  }}
+                  className="relative px-8 py-4 border-2 rounded-full overflow-hidden font-semibold text-white text-lg transition-all duration-200"
+                  style={{
+                    backgroundColor: isEntirePackInCart
+                      ? "#10B981"
+                      : BRAND_COLOR,
+                  }}
+                  disabled={isEntirePackInCart}
+                >
+                  <div className="flex items-center">
+                    <Icon
+                      icon={
+                        isEntirePackInCart
+                          ? allIcons.solid.faCheck
+                          : allIcons.solid.faCartPlus
+                      }
+                      iconClassName="text-lg mr-2"
+                    />
+                    {isEntirePackInCart ? (
+                      <Translate content="Entire Pack Added" />
+                    ) : (
+                      <Translate content="Add Entire Pack to Cart" />
+                    )}
+                  </div>
+                  {/* Success ripple effect */}
+                  <motion.div
+                    className="absolute inset-0 bg-green-400 rounded-full"
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={
+                      packAddClicked
+                        ? { scale: 4, opacity: [0.7, 0] }
+                        : { scale: 0, opacity: 0 }
+                    }
+                    transition={{ duration: 0.6 }}
+                  />
+                </Button>
+              </motion.div>
             </div>
           </div>
         )}

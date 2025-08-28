@@ -16,7 +16,7 @@ import {
   COMMON_STYLES,
   BRAND_COLOR_PRIMARY,
 } from "./utils";
-
+import { tw } from "@biqpod/app/ui/utils";
 interface CollectionProductsProps {
   collection: SnapBuy.Collection;
 }
@@ -98,7 +98,9 @@ export const CollectionProducts = ({ collection }: CollectionProductsProps) => {
         {canScrollLeft && (
           <button
             onClick={scrollLeft}
-            className="top-1/2 left-2 z-10 absolute flex justify-center items-center bg-white/80 hover:bg-white shadow-lg rounded-full w-10 h-10 transition-all -translate-y-1/2 duration-200 transform"
+            className={tw(
+              "top-1/2 left-2 z-10 absolute flex justify-center items-center bg-white/80 hover:bg-white shadow-lg rounded-full w-10 h-10 transition-all -translate-y-1/2 duration-200 transform"
+            )}
             style={{ backdropFilter: "blur(4px)" }}
           >
             <Icon

@@ -6,9 +6,11 @@ declare interface Tab {
 }
 declare interface CreateOrderOptions {
   products: SnapBuy.Order["products"];
+  packs: SnapBuy.Order["packs"];
   client: SnapBuy.Client;
   delivery: boolean;
   metaData?: Record<string, SettingValueType>;
+  place?: SnapBuy.Order["place"];
 }
 declare namespace SnapBuy {
   interface Collection {
@@ -102,7 +104,8 @@ declare namespace SnapBuy {
     createdAt?: number;
     updatedAt?: number;
     products?: Partial<Record<string, { count?: number; price?: number }>>;
-    client: Client;
+    packs?: Partial<Record<string, { count?: number; price?: number }>>;
+    client?: Client;
     // needed
     storeId?: string;
     uid?: string;
@@ -113,6 +116,12 @@ declare namespace SnapBuy {
       uid: string;
       assignedAt: number;
       agentId?: string;
+    };
+    place?: {
+      address: string;
+      wilaya: string;
+      latitude?: number;
+      longitude?: number;
     };
     metaData?: Record<string, SettingValueType>;
   }
@@ -170,13 +179,8 @@ declare namespace SnapBuy {
     id: string;
     firstname?: string;
     lastname?: string;
+
     phone: string;
-    place: {
-      address: string;
-      wilaya: string;
-      latitude?: number;
-      longitude?: number;
-    };
     // needed
     storeId?: string;
     uid?: string;

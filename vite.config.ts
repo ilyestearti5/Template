@@ -1,5 +1,4 @@
 import legacy from "@vitejs/plugin-legacy";
-import path from "node:path";
 import react from "@vitejs/plugin-react";
 import electron from "vite-plugin-electron";
 import { PluginOption, defineConfig } from "vite";

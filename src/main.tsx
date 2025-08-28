@@ -8,15 +8,11 @@ import { motion } from "framer-motion";
 import photoState from "../public/photo.png";
 import { initMyCloud } from "@biqpod/app/ui/apis";
 import { setLangs } from "@biqpod/app/ui/hooks";
+import { words } from "./translations";
+import { initializeApp } from "./api";
 export const cloud = initMyCloud({
   apiKey: "AIzaSyB0XSUnBSOaIWp-37u2N4ib5bY8-09Zeq0",
-  authDomain: "water-fetch.firebaseapp.com",
-  databaseURL: "https://water-fetch-default-rtdb.firebaseio.com",
   projectId: "water-fetch",
-  storageBucket: "water-fetch.appspot.com",
-  messagingSenderId: "911813185967",
-  appId: "1:911813185967:web:4447a361eeaddd00315f5a",
-  measurementId: "G-8GB7LZPHVX",
   functions: {
     devUri: (fnId) => `http://localhost:3000/invoke/${fnId}`,
     prodUri: (fnId) => {
@@ -34,7 +30,14 @@ startApplication(
   {
     isDev: import.meta.env.DEV,
     async onPrepare() {
-      setLangs([]);
+      setLangs(words);
+      // Initialize secure IndexedDB caching with comprehensive error handling
+      const initResult = await initializeApp();
+      if (!initResult.success) {
+        console.error("Failed to initialize app:", initResult.message);
+      } else {
+        console.log("App initialized successfully:", initResult.message);
+      }
       await delay(2000);
     },
     loading: () => (
